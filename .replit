@@ -24,19 +24,19 @@ args = "Backend Server"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "WinXP Desktop"
+args = "Phaser Client"
 
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd packages/client && npm run dev"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd packages/desktop && npm run dev"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Backend Server"
@@ -51,13 +51,13 @@ waitForPort = 3001
 outputType = "console"
 
 [[workflows.workflow]]
-name = "WinXP Desktop"
+name = "Phaser Client"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd packages/desktop && npm run dev"
-waitForPort = 3002
+args = "cd packages/client && npm run dev"
+waitForPort = 3000
 
 [workflows.workflow.metadata]
 outputType = "console"
@@ -71,8 +71,8 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 3002
-externalPort = 3002
+localPort = 3000
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "vm"
