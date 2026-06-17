@@ -22,10 +22,6 @@ args = "Start application"
 task = "workflow.run"
 args = "Backend Server"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Phaser Client"
-
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -35,7 +31,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd packages/desktop && npm run dev"
+args = "cd packages/client && npm run dev"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -46,18 +42,6 @@ author = "agent"
 task = "shell.exec"
 args = "cd packages/server && npm run start"
 waitForPort = 3001
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow]]
-name = "Phaser Client"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd packages/client && npm run dev"
-waitForPort = 3000
 
 [workflows.workflow.metadata]
 outputType = "console"

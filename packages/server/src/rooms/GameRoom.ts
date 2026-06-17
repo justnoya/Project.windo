@@ -1,59 +1,47 @@
 import { Client, Room } from "@colyseus/core";
-import { GameState, Draggables } from "../schemas/GameState";
+import { GameState } from "../schemas/GameState";
+
+const CURSOR_COLORS = [
+  '#FF4444', '#4488FF', '#44CC88', '#FFAA44',
+  '#AA44FF', '#FF44AA', '#44DDFF', '#FFDD44'
+];
 
 export class GameRoom extends Room {
   state = new GameState();
-  maxClients = 25; // Current Discord limit is 25
+  maxClients = 25;
 
-  onCreate(options: any): void | Promise<any> {
-    const draggableList = [
-      "smile",
-      "alien",
-      "a",
-      "b",
-      "c",
-      "d",
-      "cross_1",
-      "cross_2",
-      "cross_3",
-      "nought_1",
-      "nought_2",
-      "nought_3",
-    ];
-    draggableList.forEach((draggable, index) => {
-      const draggableObject = new Draggables();
+  private playerColors = new Map<string, string>();
+  private colorIndex = 0;
 
-      const offset = 500;
-      const minWidth = offset;
-      const maxWidth = options.screenWidth / 2 + 250;
-      const minHeight = offset;
-      const maxHeight = options.screenHeight / 2;
-
-      draggableObject.x =
-        Math.floor(Math.random() * (maxWidth - minWidth + 1)) + minWidth;
-      draggableObject.y =
-        Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
-      draggableObject.imageId = draggable;
-
-      this.state.draggables.set(draggable, draggableObject);
-    });
-
-    this.onMessage("move", (client, message) => {
-      // Update image position based on data received
-      const image = this.state.draggables.get(message.imageId);
-      if (image) {
-        image.x = message.x;
-        image.y = message.y;
-        this.broadcast("move", this.state.draggables);
+  onCreate(_options: any): void {
+    // Cursor sharing: broadcast to all other players
+    this.onMessage('cursor', (client: Client, data: { x: number; y: number; name: string }) => {
+      if (!this.playerColors.has(client.sessionId)) {
+        this.playerColors.set(client.sessionId, CURSOR_COLORS[this.colorIndex % CURSOR_COLORS.length]);
+        this.colorIndex++;
       }
+      this.broadcast('cursor', {
+        sessionId: client.sessionId,
+        x: data.x,
+        y: data.y,
+        name: data.name || 'Player',
+        color: this.playerColors.get(client.sessionId),
+      }, { except: client });
+    });
+
+    // Legacy move handler (kept for compatibility)
+    this.onMessage('move', (_client: Client, _message: any) => {
+      // no-op — desktop doesn't use draggables
     });
   }
 
-  onJoin(client: Client, options?: any, auth?: any): void | Promise<any> {
-    console.log(`Client joined: ${client.sessionId}`);
+  onJoin(client: Client, _options?: any): void {
+    console.log(`[GameRoom] Client joined: ${client.sessionId}`);
   }
 
-  onLeave(client: Client, code?: number): void | Promise<any> {
-    console.log(`Client left: ${client.sessionId}`);
+  onLeave(client: Client, _code?: number): void {
+    console.log(`[GameRoom] Client left: ${client.sessionId}`);
+    this.playerColors.delete(client.sessionId);
+    this.broadcast('playerLeft', { sessionId: client.sessionId });
   }
 }
