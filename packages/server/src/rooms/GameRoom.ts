@@ -1,7 +1,7 @@
-import { Client, Room } from "colyseus";
+import { Client, Room } from "@colyseus/core";
 import { GameState, Draggables } from "../schemas/GameState";
 
-export class GameRoom extends Room<GameState> {
+export class GameRoom extends Room {
   state = new GameState();
   maxClients = 25; // Current Discord limit is 25
 
@@ -53,7 +53,7 @@ export class GameRoom extends Room<GameState> {
     console.log(`Client joined: ${client.sessionId}`);
   }
 
-  onLeave(client: Client, consented: boolean): void | Promise<any> {
+  onLeave(client: Client, code?: number): void | Promise<any> {
     console.log(`Client left: ${client.sessionId}`);
   }
 }

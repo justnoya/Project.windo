@@ -1,5 +1,5 @@
 import { MonitorOptions, monitor } from "@colyseus/monitor";
-import { Server } from "colyseus";
+import { Server } from "@colyseus/core";
 import dotenv from "dotenv";
 import express, { Application, Request, Response } from "express";
 import { createServer } from "http";
