@@ -22,6 +22,10 @@ args = "Start application"
 task = "workflow.run"
 args = "Backend Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "WinXP Desktop"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -46,13 +50,29 @@ waitForPort = 3001
 [workflows.workflow.metadata]
 outputType = "console"
 
+[[workflows.workflow]]
+name = "WinXP Desktop"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd packages/desktop && npm run dev"
+waitForPort = 3002
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
+
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 3001
-externalPort = 3001
+localPort = 3002
+externalPort = 3002
 
 [deployment]
 deploymentTarget = "vm"
