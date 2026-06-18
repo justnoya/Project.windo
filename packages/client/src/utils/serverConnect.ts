@@ -1,21 +1,17 @@
 import { Client, Room } from 'colyseus.js';
 
+const PRODUCTION_SERVER = 'http://goatpanel.duckdns.org:3002';
+
 export function getServerEndpoints(): { httpBase: string; wsBase: string } {
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-  const serverUrl = (import.meta.env.VITE_SERVER_URL as string | undefined)?.replace(/\/$/, '');
 
   if (isLocal) {
     return { httpBase: 'http://localhost:3001', wsBase: 'ws://localhost:3001' };
   }
-  if (serverUrl) {
-    return {
-      httpBase: serverUrl,
-      wsBase: serverUrl.replace(/^https/, 'wss').replace(/^http/, 'ws'),
-    };
-  }
+
   return {
-    httpBase: `${location.protocol}//${location.host}/.proxy/api`,
-    wsBase: `wss://${location.host}/.proxy/api`,
+    httpBase: PRODUCTION_SERVER,
+    wsBase: PRODUCTION_SERVER.replace(/^https/, 'wss').replace(/^http/, 'ws'),
   };
 }
 
