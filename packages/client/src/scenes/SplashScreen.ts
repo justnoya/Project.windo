@@ -1,4 +1,5 @@
 import { Scene } from "phaser";
+import { SoundManager } from "../utils/SoundManager";
 
 export class SplashScreen extends Scene {
   private overlay!: HTMLDivElement;
@@ -23,6 +24,9 @@ export class SplashScreen extends Scene {
       </div>
     `;
     document.body.appendChild(this.overlay);
+
+    this.time.delayedCall(400,  () => SoundManager.splashReveal());
+    this.time.delayedCall(950,  () => SoundManager.handleReveal());
 
     this.time.delayedCall(3200, () => {
       this.overlay.classList.add("splash-fadeout");

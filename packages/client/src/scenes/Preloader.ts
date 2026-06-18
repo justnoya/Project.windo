@@ -1,4 +1,5 @@
 import { Scene } from "phaser";
+import { SoundManager } from "../utils/SoundManager";
 
 export class Preloader extends Scene {
   private overlay!: HTMLDivElement;
@@ -56,6 +57,8 @@ export class Preloader extends Scene {
       this.segTimer = setInterval(updateSegs, 100);
     }
 
+    SoundManager.startLoadingAmbient();
+
     const statuses = ["Initializing…", "Loading assets…", "Connecting servers…", "Almost there…"];
     let si = 0;
     const statusTimer = setInterval(() => {
@@ -64,6 +67,7 @@ export class Preloader extends Scene {
     }, 800);
 
     this.time.delayedCall(3500, () => {
+      SoundManager.stopLoadingAmbient();
       if (this.segTimer) clearInterval(this.segTimer);
       clearInterval(statusTimer);
       this.overlay.style.transition = "opacity 0.6s";

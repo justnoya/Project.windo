@@ -1,6 +1,7 @@
 import { Scene } from "phaser";
 import { Room, Client } from "colyseus.js";
 import { getUserName } from "../utils/discordSDK";
+import { SoundManager } from "../utils/SoundManager";
 import { VirtualFileSystem } from "../fileSystem";
 import { FileExplorer } from "../FileExplorer";
 import * as Icons from "../XPIcons";
@@ -68,6 +69,10 @@ export class WinXPDesktop extends Scene {
     this.buildStartMenu();
     this.wireGlobalEvents();
 
+    // ── Unlock audio + startup sound ─────────────────────────────────────────
+    SoundManager.unlock();
+    this.time.delayedCall(300, () => SoundManager.startup());
+
     // ── Multiplayer ───────────────────────────────────────────────────────────
     this.connectServer();
 
@@ -94,7 +99,8 @@ export class WinXPDesktop extends Scene {
       const now = Date.now();
       this.overlay.querySelectorAll('.xp-icon').forEach(el => el.classList.remove('selected'));
       d.classList.add('selected');
-      if (now - lastTap < 420) onOpen();
+      if (now - lastTap < 420) { SoundManager.dblClick(); onOpen(); }
+      else SoundManager.click();
       lastTap = now;
     });
     return d;
@@ -181,7 +187,7 @@ export class WinXPDesktop extends Scene {
     `;
     this.overlay.appendChild(sm);
 
-    const nav = (id: string) => { this.closeStartMenu(); this.openExplorer(id); };
+    const nav = (id: string) => { SoundManager.menuItem(); this.closeStartMenu(); this.openExplorer(id); };
     sm.querySelector('#sm-comp')!.addEventListener('click', () => nav('root'));
     sm.querySelector('#smr-comp')!.addEventListener('click', () => nav('root'));
     sm.querySelector('#sm-docs')!.addEventListener('click', () => nav('mydocs'));
@@ -189,13 +195,18 @@ export class WinXPDesktop extends Scene {
     sm.querySelector('#sm-pics')!.addEventListener('click', () => nav('mypics'));
     sm.querySelector('#sm-music')!.addEventListener('click', () => nav('mymusic'));
     sm.querySelector('#sm-off')!.addEventListener('click', () => {
+      SoundManager.menuItem();
       this.closeStartMenu();
       this.showTurnOffDialog();
     });
   }
 
   private toggleStartMenu() {
-    document.getElementById('xp-start-menu')?.classList.toggle('open');
+    const sm = document.getElementById('xp-start-menu');
+    if (!sm) return;
+    const opening = !sm.classList.contains('open');
+    sm.classList.toggle('open');
+    if (opening) SoundManager.menuOpen(); else SoundManager.menuClose();
   }
   private closeStartMenu() {
     document.getElementById('xp-start-menu')?.classList.remove('open');
@@ -212,6 +223,7 @@ export class WinXPDesktop extends Scene {
       else this.bringFront(winId);
       return;
     }
+    SoundManager.windowOpen();
 
     const node = this.fs.getNode(startId);
     const title = node?.name ?? 'My Computer';
@@ -371,6 +383,7 @@ export class WinXPDesktop extends Scene {
     ws.minimized = true;
     ws.el.classList.add('xp-win-hidden');
     this.tbBtns.get(winId)?.classList.remove('xp-tb-active');
+    SoundManager.windowMinimize();
   }
 
   private restoreWin(winId: string) {
@@ -379,6 +392,7 @@ export class WinXPDesktop extends Scene {
     ws.minimized = false;
     ws.el.classList.remove('xp-win-hidden');
     this.bringFront(winId);
+    SoundManager.windowRestore();
   }
 
   private toggleMax(winId: string) {
@@ -402,6 +416,7 @@ export class WinXPDesktop extends Scene {
   }
 
   private closeWin(winId: string) {
+    SoundManager.windowClose();
     this.wins.get(winId)?.el.remove();
     this.explorers.delete(winId);
     this.wins.delete(winId);
@@ -416,6 +431,7 @@ export class WinXPDesktop extends Scene {
     btn.addEventListener('click', () => {
       const ws = this.wins.get(winId);
       if (!ws) return;
+      SoundManager.click();
       if (ws.minimized) this.restoreWin(winId);
       else if (ws.el.style.zIndex === String(this.zTop)) this.minimizeWin(winId);
       else this.bringFront(winId);

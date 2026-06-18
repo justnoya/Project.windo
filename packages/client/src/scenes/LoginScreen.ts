@@ -1,5 +1,6 @@
 import { Scene } from "phaser";
 import { authorizeDiscordUser, getUserName, getUserId, getIsEmbedded } from "../utils/discordSDK";
+import { SoundManager } from "../utils/SoundManager";
 
 export class LoginScreen extends Scene {
   private overlay!: HTMLDivElement;
@@ -26,6 +27,7 @@ export class LoginScreen extends Scene {
 
       const isEmbedded = getIsEmbedded();
       if (!isEmbedded) {
+        SoundManager.loginSuccess();
         this.time.delayedCall(600, () => {
           this.transitionToDesktop();
         });
@@ -34,6 +36,7 @@ export class LoginScreen extends Scene {
 
       const username = getUserName() || "User";
       const userId = getUserId() || "";
+      SoundManager.loginChime();
       this.renderLoginScreen(username, userId);
     })();
   }
@@ -139,6 +142,7 @@ export class LoginScreen extends Scene {
   }
 
   private transitionToDesktop() {
+    SoundManager.loginSuccess();
     this.overlay.style.transition = "opacity 0.5s";
     this.overlay.style.opacity = "0";
     this.time.delayedCall(500, () => {
