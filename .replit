@@ -58,10 +58,14 @@ externalPort = 3001
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 5001
+externalPort = 3003
+
 [deployment]
 deploymentTarget = "vm"
-run = ["bash", "-c", "cd packages/server && node dist/server.js"]
-build = ["bash", "-c", "cd packages/client && npm run build && cd ../server && npm run build"]
+run = ["bash", "-c", "NODE_ENV=production PORT=3000 node packages/server/dist/server.js"]
+build = ["bash", "-c", "cd packages/client && npm install && npm run build && cd ../server && npm install --legacy-peer-deps && npm run build"]
 
 [userenv]
 
