@@ -839,6 +839,7 @@
   .xp-sm-right { width: 120px; }
   .xp-icon { width: 72px; }
   .xp-icon svg { width: 44px; height: 44px; }
+  .xp-icon-img { width: 44px; height: 44px; }
   .xp-start-btn { font-size: 13px; padding: 0 10px 0 7px; }
   .xp-tb-btn { min-width: 100px; max-width: 140px; font-size: 10px; padding: 0 6px; }
 }
