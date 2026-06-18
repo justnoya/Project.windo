@@ -258,23 +258,32 @@ export class WinXPDesktop extends Scene {
     win.id = 'win-' + winId;
     win.style.zIndex = String(++this.zTop);
 
-    const SEED_MESSAGES = [
-      { author: 'clyde_ghost', avatar: '👻', text: 'is anyone else seeing this or just me', ts: '9:42 AM' },
-      { author: 'xX_n00bslayer_Xx', avatar: '💀', text: 'yeah the app keeps crashing lmaooo', ts: '9:43 AM' },
-      { author: 'totallynotabot', avatar: '🤖', text: 'ERROR: connection_refused — retrying in 3s…', ts: '9:43 AM' },
-      { author: 'clyde_ghost', avatar: '👻', text: 'bro who let the bot in here', ts: '9:44 AM' },
-      { author: 'vaporwave99', avatar: '🌊', text: 'miscord my beloved 💜', ts: '9:45 AM' },
-    ];
+    const mkAvatar = (bg: string, content: string, isImg = false) =>
+      isImg
+        ? `<div class="mc2-avatar" style="background:${bg};overflow:hidden;padding:0"><img src="${content}" style="width:100%;height:100%;object-fit:cover;" /></div>`
+        : `<div class="mc2-avatar" style="background:${bg}">${content}</div>`;
 
-    const seedHtml = SEED_MESSAGES.map(m => `
-      <div class="mc-msg">
-        <div class="mc-avatar">${m.avatar}</div>
-        <div class="mc-msg-content">
-          <span class="mc-author">${m.author}</span>
-          <span class="mc-ts">${m.ts}</span>
-          <div class="mc-text">${m.text}</div>
+    const mkMsg = (avatarHtml: string, author: string, authorColor: string, ts: string, body: string, badge = '') => `
+      <div class="mc2-msg">
+        ${avatarHtml}
+        <div class="mc2-msg-right">
+          <div class="mc2-msg-header">
+            <span class="mc2-author" style="color:${authorColor}">${author}</span>
+            ${badge ? `<span class="mc2-badge">${badge}</span>` : ''}
+            <span class="mc2-ts">Today at ${ts}</span>
+          </div>
+          <div class="mc2-msg-body">${body}</div>
         </div>
-      </div>`).join('');
+      </div>`;
+
+    const seedMsgs =
+      mkMsg(mkAvatar('#1a3a5c', '<img src="/miscord-icon.png" style="width:100%;height:100%;object-fit:cover;" />'), 'Watch_User', '#b9c0ca', '4:20 PM', 'Hey everyone!<br>Welcome to Miscord 🤖') +
+      mkMsg(mkAvatar('#2d4a3e', '🧝', false), 'PixelGhost', '#57a560', '4:21 PM', "Yo! How's it going?") +
+      mkMsg(mkAvatar('#1e2535', '🤖', false), 'Helper Bot', '#b9c0ca', '4:21 PM',
+        `<div class="mc2-bot-card">👋 Welcome <span class="mc2-mention">@New_User</span> to Miscord!<br>Make sure to read <span class="mc2-mention">#rules</span></div>`,
+        'BOT') +
+      mkMsg(mkAvatar('#3b1f2b', '👾', false), 'RetroGamer', '#c77dff', '4:22 PM', 'Let\'s play something later 🎮') +
+      mkMsg(mkAvatar('#1a3320', '🌄', false), 'New_User', '#b9c0ca', '4:22 PM', 'Thanks! Glad to be here 😀');
 
     win.innerHTML = `
       <div class="xp-titlebar miscord-titlebar">
@@ -286,61 +295,99 @@ export class WinXPDesktop extends Scene {
           <button class="xp-wbtn xp-close" id="cls-${winId}" title="Close">✕</button>
         </div>
       </div>
-      <div class="mc-body">
-        <div class="mc-server-rail">
-          <div class="mc-server-icon mc-server-home" title="Home">
+      <div class="mc2-body">
+        <div class="mc2-crt"></div>
+
+        <!-- Server rail -->
+        <div class="mc2-server-rail">
+          <div class="mc2-srv-icon mc2-srv-active" title="Miscord">
             <img src="/miscord-icon.png" alt="Miscord" />
           </div>
-          <div class="mc-server-sep"></div>
-          <div class="mc-server-icon" title="General">💬</div>
-          <div class="mc-server-icon" title="Gaming">🎮</div>
-          <div class="mc-server-icon" title="Memes">💀</div>
-          <div class="mc-server-icon" title="Music">🎵</div>
+          <div class="mc2-srv-sep"></div>
+          <div class="mc2-srv-icon" title="Pixel World" style="background:#2d4a3e;font-size:22px">🌲</div>
+          <div class="mc2-srv-icon" title="RetroZone" style="background:#3b1f2b;font-size:22px">👾</div>
+          <div class="mc2-srv-icon" title="Void" style="background:#1a1a2a;font-size:22px">💀</div>
+          <div class="mc2-srv-add" title="Add Server">＋</div>
         </div>
-        <div class="mc-sidebar">
-          <div class="mc-guild-header">
-            <span>Miscord HQ</span>
-            <span class="mc-guild-chevron">▾</span>
+
+        <!-- Channel sidebar -->
+        <div class="mc2-sidebar">
+          <div class="mc2-guild-header">
+            <span class="mc2-guild-name">Miscord</span>
+            <span class="mc2-guild-chevron">▾</span>
           </div>
-          <div class="mc-channel-section">TEXT CHANNELS</div>
-          <div class="mc-channel mc-channel-active">
-            <span class="mc-channel-hash">#</span> general
-          </div>
-          <div class="mc-channel">
-            <span class="mc-channel-hash">#</span> off-topic
-          </div>
-          <div class="mc-channel">
-            <span class="mc-channel-hash">#</span> bug-reports
-          </div>
-          <div class="mc-channel">
-            <span class="mc-channel-hash">#</span> memes
-          </div>
-          <div class="mc-channel-section">VOICE CHANNELS</div>
-          <div class="mc-channel mc-channel-voice">
-            <span class="mc-channel-hash">🔊</span> General
-          </div>
-          <div class="mc-channel mc-channel-voice">
-            <span class="mc-channel-hash">🔊</span> AFK
-          </div>
-          <div class="mc-user-panel">
-            <div class="mc-user-avatar">🤕</div>
-            <div class="mc-user-info">
-              <div class="mc-user-name">${this.esc(this.userName)}</div>
-              <div class="mc-user-status">Online</div>
+          <div class="mc2-sidebar-scroll">
+            <div class="mc2-ch-group">
+              <div class="mc2-ch-section">
+                <span class="mc2-ch-section-arrow">▾</span>
+                <span>TEXT CHANNELS</span>
+                <button class="mc2-ch-add">＋</button>
+              </div>
+              <div class="mc2-ch mc2-ch-active">
+                <span class="mc2-ch-hash">#</span><span>general</span>
+                <span class="mc2-ch-add-user">👤+</span>
+              </div>
+              <div class="mc2-ch"><span class="mc2-ch-hash">#</span><span>rules</span></div>
+              <div class="mc2-ch"><span class="mc2-ch-hash">#</span><span>memes</span></div>
+              <div class="mc2-ch"><span class="mc2-ch-hash">#</span><span>bot-commands</span></div>
             </div>
-            <div class="mc-user-icons">🎤 🎧 ⚙</div>
+            <div class="mc2-ch-group">
+              <div class="mc2-ch-section">
+                <span class="mc2-ch-section-arrow">▾</span>
+                <span>VOICE CHANNELS</span>
+                <button class="mc2-ch-add">＋</button>
+              </div>
+              <div class="mc2-ch mc2-ch-voice"><span class="mc2-ch-vol">🔉</span><span>General</span></div>
+              <div class="mc2-ch mc2-ch-voice"><span class="mc2-ch-vol">🔉</span><span>Gaming</span></div>
+              <div class="mc2-ch mc2-ch-voice"><span class="mc2-ch-vol">🔉</span><span>Music</span></div>
+              <div class="mc2-ch mc2-ch-voice"><span class="mc2-ch-vol">🔉</span><span>AFK</span></div>
+            </div>
+          </div>
+          <div class="mc2-user-panel">
+            <div class="mc2-user-avatar">
+              <img src="/miscord-icon.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+              <div class="mc2-user-status-dot"></div>
+            </div>
+            <div class="mc2-user-info">
+              <div class="mc2-user-name">${this.esc(this.userName)}</div>
+              <div class="mc2-user-disc">#0001</div>
+            </div>
+            <div class="mc2-user-actions">
+              <button class="mc2-ua-btn" title="Mute">🎤</button>
+              <button class="mc2-ua-btn" title="Deafen">🎧</button>
+              <button class="mc2-ua-btn" title="Settings">⚙</button>
+            </div>
           </div>
         </div>
-        <div class="mc-main">
-          <div class="mc-channel-header">
-            <span class="mc-channel-hash-big">#</span>
-            <span class="mc-channel-name-big">general</span>
-            <span class="mc-channel-topic">Welcome to Miscord. Things may be slightly broken.</span>
+
+        <!-- Main chat -->
+        <div class="mc2-main">
+          <div class="mc2-topbar">
+            <div class="mc2-topbar-left">
+              <span class="mc2-topbar-hash">#</span>
+              <span class="mc2-topbar-channel">general</span>
+            </div>
+            <div class="mc2-topbar-right">
+              <button class="mc2-tb-btn" title="Notifications">🔔</button>
+              <button class="mc2-tb-btn" title="Pinned Messages">📌</button>
+              <button class="mc2-tb-btn" title="Members">👥</button>
+              <div class="mc2-search-wrap">
+                <input class="mc2-search" type="text" placeholder="Search" />
+                <span class="mc2-search-icon">🔍</span>
+              </div>
+              <button class="mc2-tb-btn" title="Help">❓</button>
+            </div>
           </div>
-          <div class="mc-messages" id="mc-messages-${winId}">${seedHtml}</div>
-          <div class="mc-input-area">
-            <input class="mc-input" id="mc-input-${winId}" type="text" placeholder="Message #general" maxlength="200" />
-            <button class="mc-send-btn" id="mc-send-${winId}" title="Send">➤</button>
+          <div class="mc2-messages" id="mc-messages-${winId}">${seedMsgs}</div>
+          <div class="mc2-input-wrap">
+            <button class="mc2-input-attach" title="Attach">＋</button>
+            <input class="mc2-input" id="mc-input-${winId}" type="text" placeholder="Message #general" maxlength="200" />
+            <div class="mc2-input-actions">
+              <button class="mc2-input-btn" title="Gift">🎁</button>
+              <button class="mc2-input-btn mc2-input-gif" title="GIF">GIF</button>
+              <button class="mc2-input-btn" title="Sticker">🎭</button>
+              <button class="mc2-input-btn" id="mc-send-${winId}" title="Send Emoji / Send">😊</button>
+            </div>
           </div>
         </div>
       </div>
@@ -375,13 +422,17 @@ export class WinXPDesktop extends Scene {
       const m = String(now.getMinutes()).padStart(2, '0');
       const ts = `${h}:${m} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
       const msg = document.createElement('div');
-      msg.className = 'mc-msg mc-msg-own';
+      msg.className = 'mc2-msg mc2-msg-own';
       msg.innerHTML = `
-        <div class="mc-avatar">😊</div>
-        <div class="mc-msg-content">
-          <span class="mc-author mc-author-own">${this.esc(this.userName)}</span>
-          <span class="mc-ts">${ts}</span>
-          <div class="mc-text">${this.esc(text)}</div>
+        <div class="mc2-avatar" style="background:#1a3a5c;overflow:hidden;padding:0">
+          <img src="/miscord-icon.png" style="width:100%;height:100%;object-fit:cover;" />
+        </div>
+        <div class="mc2-msg-right">
+          <div class="mc2-msg-header">
+            <span class="mc2-author" style="color:#c77dff">${this.esc(this.userName)}</span>
+            <span class="mc2-ts">Today at ${ts}</span>
+          </div>
+          <div class="mc2-msg-body">${this.esc(text)}</div>
         </div>`;
       msgArea.appendChild(msg);
       msgArea.scrollTop = msgArea.scrollHeight;
@@ -392,7 +443,7 @@ export class WinXPDesktop extends Scene {
     input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
 
     const tbBtn = this.makeTbBtn(winId, 'Miscord', Icons.mycomputer);
-    tbBtn.innerHTML = `<img src="/miscord-icon.png" style="width:16px;height:16px;object-fit:contain;" /> Miscord`;
+    tbBtn.innerHTML = `<img src="/miscord-icon.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" /> Miscord`;
     document.getElementById('xp-programs')?.appendChild(tbBtn);
     this.tbBtns.set(winId, tbBtn);
 
