@@ -31,7 +31,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd packages/client && npm run dev"
+args = "cd packages/client && npm run build && fuser -k 5000/tcp 2>/dev/null; sleep 1 && npm run preview"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -57,14 +57,6 @@ externalPort = 3001
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3003
-
-[[ports]]
-localPort = 5002
-externalPort = 4200
 
 [deployment]
 deploymentTarget = "vm"
