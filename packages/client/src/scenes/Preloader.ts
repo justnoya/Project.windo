@@ -66,13 +66,13 @@ export class Preloader extends Scene {
       if (statusEl) statusEl.textContent = statuses[si];
     }, 800);
 
-    this.time.delayedCall(3500, () => {
+    this.time.delayedCall(2200, () => {
       SoundManager.stopLoadingAmbient();
       if (this.segTimer) clearInterval(this.segTimer);
       clearInterval(statusTimer);
-      this.overlay.style.transition = "opacity 0.6s";
+      this.overlay.style.transition = "opacity 0.5s";
       this.overlay.style.opacity = "0";
-      this.time.delayedCall(600, () => {
+      this.time.delayedCall(500, () => {
         this.cleanup();
         this.scene.start("LoginScreen");
       });

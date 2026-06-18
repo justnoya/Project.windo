@@ -14,6 +14,16 @@ interface WinState {
   prev?: { left: string; top: string; width: string; height: string };
 }
 
+interface StickyNote {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  color: string;
+  author: string;
+  sessionId: string;
+}
+
 const CURSOR_COLORS = ['#FF4444','#4488FF','#44CC88','#FFAA44','#AA44FF','#FF44AA','#44DDFF','#FFDD44'];
 
 export class WinXPDesktop extends Scene {
@@ -27,6 +37,7 @@ export class WinXPDesktop extends Scene {
   private explorers = new Map<string, FileExplorer>();
   private tbBtns = new Map<string, HTMLElement>();
   private pCursors = new Map<string, HTMLElement>();
+  private stickyNotes = new Map<string, HTMLElement>();
   private zTop = 100;
   private clockTick: ReturnType<typeof setInterval> | null = null;
   private lastCurSend = 0;
@@ -448,6 +459,8 @@ export class WinXPDesktop extends Scene {
     menu.innerHTML = `
       <div class="xp-ctx-item" id="ctx-comp"><svg viewBox="0 0 48 48" width="16" height="16">${Icons.mycomputer}</svg>&nbsp;Open My Computer</div>
       <div class="xp-ctx-sep"></div>
+      <div class="xp-ctx-item" id="ctx-note">📌&nbsp; New Sticky Note</div>
+      <div class="xp-ctx-sep"></div>
       <div class="xp-ctx-item xp-disabled">Arrange Icons By</div>
       <div class="xp-ctx-item xp-disabled">Refresh</div>
       <div class="xp-ctx-sep"></div>
@@ -456,6 +469,7 @@ export class WinXPDesktop extends Scene {
     this.posCtx(menu, x, y);
     document.body.appendChild(menu);
     menu.querySelector('#ctx-comp')!.addEventListener('click', () => { this.closeCtxMenus(); this.openExplorer('root'); });
+    menu.querySelector('#ctx-note')!.addEventListener('click', () => { this.closeCtxMenus(); this.spawnNote(x, y); });
     menu.querySelector('#ctx-props')!.addEventListener('click', () => { this.closeCtxMenus(); this.showSystemProps(); });
     setTimeout(() => document.addEventListener('pointerdown', () => this.closeCtxMenus(), { once: true, capture: true }), 0);
   }
@@ -626,6 +640,16 @@ export class WinXPDesktop extends Scene {
         this.pCursors.get(d.sessionId)?.remove();
         this.pCursors.delete(d.sessionId);
       });
+
+      this.room!.onMessage('note:add',    (d: StickyNote) => this.renderNote(d));
+      this.room!.onMessage('note:move',   (d: { id: string; x: number; y: number }) => {
+        const el = this.stickyNotes.get(d.id);
+        if (el) { el.style.left = d.x + 'px'; el.style.top = d.y + 'px'; }
+      });
+      this.room!.onMessage('note:delete', (d: { id: string }) => {
+        this.stickyNotes.get(d.id)?.remove();
+        this.stickyNotes.delete(d.id);
+      });
     } catch (err) {
       console.warn('[XP] Multiplayer unavailable:', err);
     }
@@ -665,11 +689,163 @@ export class WinXPDesktop extends Scene {
   // ══════════════════════════════════════════════════════════════════════════
   // CLEANUP
   // ══════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
+  // STICKY NOTES
+  // ══════════════════════════════════════════════════════════════════════════
+
+  private spawnNote(clickX: number, clickY: number) {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    const x = Math.min(Math.max(10, clickX - 10), window.innerWidth  - 210);
+    const y = Math.min(Math.max(10, clickY - 10), window.innerHeight - 170);
+
+    const el = document.createElement('div');
+    el.className = 'xp-sticky xp-sticky-editing';
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+    el.innerHTML = `
+      <div class="xp-sticky-header">
+        <span class="xp-sticky-author">${this.esc(this.userName)}</span>
+        <button class="xp-sticky-close" title="Cancel">✕</button>
+      </div>
+      <textarea class="xp-sticky-input" placeholder="Write a note…" maxlength="200"></textarea>
+      <div class="xp-sticky-hint">Enter to post · Esc to cancel</div>
+    `;
+    document.body.appendChild(el);
+
+    const ta     = el.querySelector('.xp-sticky-input') as HTMLTextAreaElement;
+    const cancel = el.querySelector('.xp-sticky-close') as HTMLButtonElement;
+    ta.focus();
+
+    this.makeNoteDraggable(el, id, false);
+
+    let committed = false;
+    const commit = () => {
+      if (committed) return;
+      const text = ta.value.trim();
+      if (!text) { el.remove(); return; }
+      committed = true;
+      this.finaliseNote(el, id, text, false);
+      if (this.room) {
+        this.room.send('note:add', {
+          id,
+          text,
+          x: parseInt(el.style.left),
+          y: parseInt(el.style.top),
+          author: this.userName,
+        });
+      }
+    };
+
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { el.remove(); }
+    });
+    cancel.addEventListener('click', () => el.remove());
+
+    // Click outside → commit
+    setTimeout(() => {
+      const onOut = (e: PointerEvent) => {
+        if (!el.contains(e.target as Node)) { commit(); document.removeEventListener('pointerdown', onOut, true); }
+      };
+      document.addEventListener('pointerdown', onOut, true);
+    }, 200);
+  }
+
+  private finaliseNote(el: HTMLElement, id: string, text: string, isOwn: boolean) {
+    el.classList.remove('xp-sticky-editing');
+    const header = el.querySelector('.xp-sticky-header')!;
+    const oldClose = header.querySelector('.xp-sticky-close');
+    if (oldClose) oldClose.remove();
+    // Replace textarea / hint with text
+    el.querySelector('.xp-sticky-input')?.remove();
+    el.querySelector('.xp-sticky-hint')?.remove();
+    const body = document.createElement('div');
+    body.className = 'xp-sticky-text';
+    body.innerHTML = this.esc(text).replace(/\n/g, '<br>');
+    el.appendChild(body);
+    // Add delete button only for own notes
+    if (isOwn || !isOwn) { // always show (only own notes reach here via renderNote with isOwn)
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'xp-sticky-close';
+      closeBtn.title = 'Delete';
+      closeBtn.textContent = '✕';
+      closeBtn.addEventListener('click', () => {
+        this.room?.send('note:delete', { id });
+        el.remove();
+        this.stickyNotes.delete(id);
+        SoundManager.windowClose();
+      });
+      header.appendChild(closeBtn);
+    }
+    this.stickyNotes.set(id, el);
+    this.makeNoteDraggable(el, id, true);
+  }
+
+  private renderNote(data: StickyNote) {
+    // Deduplicate (server echoes back to all including sender)
+    if (this.stickyNotes.has(data.id)) return;
+
+    const el = document.createElement('div');
+    el.className = 'xp-sticky';
+    el.style.left = data.x + 'px';
+    el.style.top  = data.y + 'px';
+    el.style.setProperty('--note-accent', data.color || '#f0c000');
+    el.innerHTML = `
+      <div class="xp-sticky-header">
+        <span class="xp-sticky-author">${this.esc(data.author || 'Player')}</span>
+      </div>
+      <div class="xp-sticky-text">${this.esc(data.text).replace(/\n/g, '<br>')}</div>
+    `;
+    document.body.appendChild(el);
+    this.stickyNotes.set(data.id, el);
+
+    const isOwn = this.room ? data.sessionId === this.room.sessionId : false;
+    if (isOwn) {
+      const header = el.querySelector('.xp-sticky-header')!;
+      const btn = document.createElement('button');
+      btn.className = 'xp-sticky-close'; btn.title = 'Delete'; btn.textContent = '✕';
+      btn.addEventListener('click', () => {
+        this.room?.send('note:delete', { id: data.id });
+        el.remove(); this.stickyNotes.delete(data.id);
+        SoundManager.windowClose();
+      });
+      header.appendChild(btn);
+      this.makeNoteDraggable(el, data.id, true);
+    }
+  }
+
+  private makeNoteDraggable(el: HTMLElement, id: string, sendOnDrop: boolean) {
+    const header = el.querySelector('.xp-sticky-header') as HTMLElement;
+    if (!header) return;
+    header.style.cursor = 'move';
+    let drag = false, ox = 0, oy = 0, sl = 0, st = 0;
+    header.addEventListener('pointerdown', e => {
+      if ((e.target as HTMLElement).classList.contains('xp-sticky-close')) return;
+      drag = true; ox = e.clientX; oy = e.clientY;
+      sl = parseInt(el.style.left) || 0; st = parseInt(el.style.top) || 0;
+      header.setPointerCapture(e.pointerId);
+      e.stopPropagation();
+    });
+    header.addEventListener('pointermove', e => {
+      if (!drag) return;
+      el.style.left = Math.max(0, Math.min(window.innerWidth  - 200, sl + e.clientX - ox)) + 'px';
+      el.style.top  = Math.max(0, Math.min(window.innerHeight - 80,  st + e.clientY - oy)) + 'px';
+    });
+    header.addEventListener('pointerup', () => {
+      if (!drag) return; drag = false;
+      if (sendOnDrop && this.room) {
+        this.room.send('note:move', { id, x: parseInt(el.style.left), y: parseInt(el.style.top) });
+      }
+    });
+  }
+
   private cleanup() {
     if (this.clockTick) clearInterval(this.clockTick);
     if (this.touchHide) clearTimeout(this.touchHide);
     this.pCursors.forEach(el => el.remove());
     this.pCursors.clear();
+    this.stickyNotes.forEach(el => el.remove());
+    this.stickyNotes.clear();
     this.overlay?.remove();
     this.touchCursor?.remove();
     try { this.room?.leave(); } catch { /* ignore */ }

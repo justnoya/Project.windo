@@ -28,9 +28,9 @@ export class SplashScreen extends Scene {
     this.time.delayedCall(400,  () => SoundManager.splashReveal());
     this.time.delayedCall(950,  () => SoundManager.handleReveal());
 
-    this.time.delayedCall(3200, () => {
+    this.time.delayedCall(1900, () => {
       this.overlay.classList.add("splash-fadeout");
-      this.time.delayedCall(700, () => {
+      this.time.delayedCall(500, () => {
         this.cleanup();
         this.scene.start("Preloader");
       });
