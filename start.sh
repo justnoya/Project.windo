@@ -10,7 +10,7 @@ echo ""
 # ── Install server deps ──────────────────────
 echo "[1/4] Installing server dependencies..."
 cd packages/server
-npm install --no-audit --no-fund
+npm install --no-audit --no-fund --ignore-engines
 echo "      Done."
 cd ../..
 
@@ -24,7 +24,7 @@ cd ../..
 # ── Build client ─────────────────────────────
 echo "[3/4] Building client (Vite)..."
 cd packages/client
-npm install --no-audit --no-fund
+npm install --no-audit --no-fund --ignore-engines
 npm run build
 echo "      Done."
 cd ../..
