@@ -1537,7 +1537,6 @@ export class WinXPDesktop extends Scene {
   private async connectServer() {
     try {
       const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-      const serverUrl = (import.meta.env.VITE_SERVER_URL as string | undefined)?.replace(/\/$/, '');
 
       let httpBase: string;
       let wsBase: string;
@@ -1545,9 +1544,6 @@ export class WinXPDesktop extends Scene {
       if (isLocal) {
         httpBase = 'http://localhost:3001';
         wsBase   = 'ws://localhost:3001';
-      } else if (serverUrl) {
-        httpBase = serverUrl;
-        wsBase   = serverUrl.replace(/^https/, 'wss').replace(/^http/, 'ws');
       } else {
         httpBase = `${location.protocol}//${location.host}/.proxy/api`;
         wsBase   = `wss://${location.host}/.proxy/api`;

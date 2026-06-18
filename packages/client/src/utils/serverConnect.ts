@@ -7,18 +7,9 @@ export function getServerEndpoints(): { httpBase: string; wsBase: string } {
     return { httpBase: 'http://localhost:3001', wsBase: 'ws://localhost:3001' };
   }
 
-  // In Replit (and any proxied environment), route through the Vite proxy at /.proxy/api
-  // which forwards to the local backend on port 3001.
-  const externalServer = import.meta.env.VITE_SERVER_URL as string | undefined;
-  if (externalServer) {
-    return {
-      httpBase: externalServer,
-      wsBase: externalServer.replace(/^https/, 'wss').replace(/^http/, 'ws'),
-    };
-  }
-
-  const origin = location.origin;
-  const proxyBase = `${origin}/.proxy/api`;
+  // Always route through the Vite proxy (/.proxy/api → localhost:3001)
+  // when not running directly on localhost.
+  const proxyBase = `${location.protocol}//${location.host}/.proxy/api`;
   const wsProxyBase = proxyBase.replace(/^https/, 'wss').replace(/^http/, 'ws');
   return { httpBase: proxyBase, wsBase: wsProxyBase };
 }
