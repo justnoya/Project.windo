@@ -63,9 +63,14 @@ export class WinXPDesktop extends Scene {
   private lastCurSend = 0;
   private userName = 'User';
   private isMobile = false;
+  private recentApps: Array<{ id: string; label: string; iconHtml: string; action: () => void }> = [];
   private miscordOnline = new Map<string, { name: string; color: string }>();
   private miscordActiveFriend: string | null = null;
   private miscordDmHistory = new Map<string, Array<{ fromName: string; text: string; ts: number; own: boolean; read?: boolean }>>();
+  private storyTimers: ReturnType<typeof setTimeout>[] = [];
+  private storyEngaged = false;
+  private storyPhase = 0;
+  private notifContainer: HTMLElement | null = null;
 
   private wyp_myChar: string | null = null;
   private wyp_myEmoji = '';
@@ -223,50 +228,85 @@ export class WinXPDesktop extends Scene {
         <div class="xp-sm-username">${this.esc(this.userName)}</div>
       </div>
       <div class="xp-sm-body">
-        <div class="xp-sm-left">
-          <div class="xp-sm-item" id="sm-comp">
-            <svg viewBox="0 0 48 48">${Icons.mycomputer}</svg>
-            <div><b>My Computer</b><span class="xp-sm-sub">Browse all files &amp; folders</span></div>
-          </div>
+        <div class="xp-sm-left" id="xp-sm-recents">
+          <div class="xp-sm-recents-hdr">Recently Opened</div>
           <div class="xp-sm-sep"></div>
-          <div class="xp-sm-item" id="sm-docs">
-            <svg viewBox="0 0 48 48">${Icons.folderOpen}</svg>
-            <div>My Documents</div>
-          </div>
-          <div class="xp-sm-item" id="sm-pics">
-            <svg viewBox="0 0 48 48">${Icons.folderOpen}</svg>
-            <div>My Pictures</div>
-          </div>
-          <div class="xp-sm-item" id="sm-music">
-            <svg viewBox="0 0 48 48">${Icons.folderOpen}</svg>
-            <div>My Music</div>
-          </div>
-        </div>
-        <div class="xp-sm-right">
-          <div class="xp-sm-item" id="smr-comp">My Computer</div>
-          <div class="xp-sm-item" id="smr-docs">My Documents</div>
-          <div class="xp-sm-sep"></div>
-          <div class="xp-sm-item xp-disabled">Control Panel</div>
+          <div class="xp-sm-no-recent">No recently opened programs.<br>Open an app from the desktop.</div>
         </div>
       </div>
       <div class="xp-sm-footer">
-        <button class="xp-sm-footer-btn" id="sm-off">⏻ Turn Off Computer</button>
+        <button class="xp-sm-footer-btn" id="sm-restart">↺ Restart</button>
+        <button class="xp-sm-footer-btn" id="sm-off">⏻ Shut Down</button>
       </div>
     `;
     this.overlay.appendChild(sm);
 
-    const nav = (id: string) => { SoundManager.menuItem(); this.closeStartMenu(); this.openExplorer(id); };
-    sm.querySelector('#sm-comp')!.addEventListener('click', () => nav('root'));
-    sm.querySelector('#smr-comp')!.addEventListener('click', () => nav('root'));
-    sm.querySelector('#sm-docs')!.addEventListener('click', () => nav('mydocs'));
-    sm.querySelector('#smr-docs')!.addEventListener('click', () => nav('mydocs'));
-    sm.querySelector('#sm-pics')!.addEventListener('click', () => nav('mypics'));
-    sm.querySelector('#sm-music')!.addEventListener('click', () => nav('mymusic'));
     sm.querySelector('#sm-off')!.addEventListener('click', () => {
       SoundManager.menuItem();
       this.closeStartMenu();
       this.showTurnOffDialog();
     });
+    sm.querySelector('#sm-restart')!.addEventListener('click', () => {
+      SoundManager.menuItem();
+      this.closeStartMenu();
+      this.showRestartDialog();
+    });
+  }
+
+  private trackRecent(id: string, label: string, iconHtml: string, action: () => void) {
+    this.recentApps = this.recentApps.filter(a => a.id !== id);
+    this.recentApps.unshift({ id, label, iconHtml, action });
+    if (this.recentApps.length > 6) this.recentApps = this.recentApps.slice(0, 6);
+    this.refreshStartMenuRecents();
+  }
+
+  private refreshStartMenuRecents() {
+    const list = document.getElementById('xp-sm-recents');
+    if (!list) return;
+    if (this.recentApps.length === 0) {
+      list.innerHTML = `<div class="xp-sm-recents-hdr">Recently Opened</div><div class="xp-sm-sep"></div><div class="xp-sm-no-recent">No recently opened programs.<br>Open an app from the desktop.</div>`;
+      return;
+    }
+    list.innerHTML = `
+      <div class="xp-sm-recents-hdr">Recently Opened</div>
+      <div class="xp-sm-sep"></div>
+      ${this.recentApps.map(app => `
+        <div class="xp-sm-item" data-aid="${this.esc(app.id)}">
+          ${app.iconHtml}
+          <div>${this.esc(app.label)}</div>
+        </div>
+      `).join('')}
+    `;
+    list.querySelectorAll<HTMLElement>('.xp-sm-item').forEach(el => {
+      const aid = el.dataset.aid;
+      const app = this.recentApps.find(a => a.id === aid);
+      if (app) el.addEventListener('click', () => {
+        SoundManager.menuItem();
+        this.closeStartMenu();
+        app.action();
+      });
+    });
+  }
+
+  private showRestartDialog() {
+    const ov = document.createElement('div');
+    ov.className = 'xp-dlg-overlay';
+    ov.innerHTML = `
+      <div class="xp-dlg">
+        <div class="xp-dlg-title">
+          <svg viewBox="0 0 48 48">${Icons.mycomputer}</svg>
+          Restart
+        </div>
+        <div class="xp-dlg-body">Are you sure you want to restart?</div>
+        <div class="xp-dlg-btns">
+          <button class="xp-dlg-btn" id="dlg-yes-restart">Restart</button>
+          <button class="xp-dlg-btn" id="dlg-cancel-restart">Cancel</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    ov.querySelector('#dlg-yes-restart')!.addEventListener('click', () => { location.reload(); });
+    ov.querySelector('#dlg-cancel-restart')!.addEventListener('click', () => { ov.remove(); });
   }
 
   private toggleStartMenu() {
@@ -285,6 +325,9 @@ export class WinXPDesktop extends Scene {
   // ══════════════════════════════════════════════════════════════════════════
   private openMiscord() {
     const winId = 'miscord';
+    this.trackRecent(winId, 'Miscord',
+      `<img src="/miscord-icon.png" class="xp-sm-recent-icon" />`,
+      () => this.openMiscord());
     if (this.wins.has(winId)) {
       const ws = this.wins.get(winId)!;
       if (ws.minimized) this.restoreWin(winId);
@@ -444,7 +487,14 @@ export class WinXPDesktop extends Scene {
       return;
     }
 
-    let html = `<div class="mxp-section-hdr">ONLINE — ${users.length}</div>`;
+    const isStoryActive = this.miscordActiveFriend === '__story__';
+    let html = `
+      <div class="mxp-friend mxp-unknown${isStoryActive ? ' mxp-active' : ''}" data-sid="__story__">
+        <div class="mxp-friend-avatar">?</div>
+        <span class="mxp-friend-name">UNKNOWN_ENTITY</span>
+        <span class="mxp-dot mxp-dot-online"></span>
+      </div>
+      <div class="mxp-section-hdr">ONLINE — ${users.length}</div>`;
     for (const [sid, { name, color }] of users) {
       const initial  = (name[0] || '?').toUpperCase();
       const isActive = this.miscordActiveFriend === sid;
@@ -462,7 +512,12 @@ export class WinXPDesktop extends Scene {
 
     list.querySelectorAll<HTMLElement>('.mxp-friend').forEach(el => {
       el.addEventListener('click', () => {
-        this.openMiscordDm(el.dataset.sid!, el.dataset.name!, el.dataset.color!);
+        const sid = el.dataset.sid!;
+        if (sid === '__story__') {
+          this.openMiscordDm(sid, 'UNKNOWN_ENTITY', '#1a0000');
+        } else {
+          this.openMiscordDm(sid, el.dataset.name!, el.dataset.color!);
+        }
       });
     });
   }
@@ -476,38 +531,47 @@ export class WinXPDesktop extends Scene {
     const noChat     = win.querySelector<HTMLElement>('#mxp-no-chat')!;
     const chatActive = win.querySelector<HTMLElement>('#mxp-chat-active')!;
 
-    // Mobile: slide in chat panel over friends list
     if (window.innerWidth < 600) chatPanel.classList.add('mxp-visible');
 
-    // Update header
     const hdrAvatar = win.querySelector<HTMLElement>('#mxp-hdr-avatar')!;
     hdrAvatar.textContent = (name[0] || '?').toUpperCase();
     hdrAvatar.style.background = color;
     win.querySelector<HTMLElement>('#mxp-hdr-name')!.textContent = name;
 
-    // Show active chat
     noChat.style.display = 'none';
     chatActive.style.display = 'flex';
 
-    // Enable input
     const input   = win.querySelector<HTMLInputElement>('#mxp-msg-input')!;
     const sendBtn = win.querySelector<HTMLButtonElement>('#mxp-send-btn')!;
+    const msgArea = win.querySelector<HTMLElement>('#mxp-messages')!;
+
+    if (sid === '__story__') {
+      input.disabled = true;
+      input.placeholder = '> CONNECTION RESTRICTED';
+      sendBtn.disabled = true;
+      hdrAvatar.style.background = '#1a0000';
+      hdrAvatar.style.color = '#cc0000';
+      hdrAvatar.style.border = '1px solid #3a0000';
+      const statusEl = win.querySelector<HTMLElement>('.mxp-chat-hdr-status')!;
+      if (statusEl) statusEl.innerHTML = `<span class="mxp-dot mxp-dot-online"></span>&nbsp;SIGNAL DETECTED`;
+      this.showMiscordStory(win, msgArea);
+      this.refreshMiscordFriends();
+      return;
+    }
+
     input.disabled = false;
     sendBtn.disabled = false;
-    input.placeholder = `Message ${name}…`;
+    input.placeholder = `> Message ${name}`;
     input.focus();
 
-    // Render message history
-    const msgArea = win.querySelector<HTMLElement>('#mxp-messages')!;
     const history = this.miscordDmHistory.get(sid) || [];
     if (history.length === 0) {
-      msgArea.innerHTML = `<div class="mxp-msg-empty">Start of your conversation with <b>${this.esc(name)}</b> — say hello! 👋</div>`;
+      msgArea.innerHTML = `<div class="mxp-msg-empty">> begin transmission with ${this.esc(name)}</div>`;
     } else {
       msgArea.innerHTML = history.map(m => this.renderMiscordMsg(m)).join('');
     }
     msgArea.scrollTop = msgArea.scrollHeight;
 
-    // Mark as read, refresh list to clear badge
     history.forEach(m => { m.read = true; });
     this.refreshMiscordFriends();
   }
@@ -554,8 +618,183 @@ export class WinXPDesktop extends Scene {
         msgArea.scrollTop = msgArea.scrollHeight;
       }
     } else {
-      this.refreshMiscordFriends(); // show unread badge
+      this.refreshMiscordFriends();
+      if (!isOwn) {
+        const senderColor = this.miscordOnline.get(convId)?.color ?? '#555';
+        this.showMiscordNotification(d.fromName, d.text, convId, senderColor);
+      }
     }
+  }
+
+  // ── Miscord helpers: horror story & notifications ─────────────────────────
+
+  private nowTs(): string {
+    const d = new Date();
+    const h = d.getHours() % 12 || 12;
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${h}:${m} ${d.getHours() >= 12 ? 'PM' : 'AM'}`;
+  }
+
+  private showMiscordStory(win: HTMLElement, msgArea: HTMLElement) {
+    if (this.storyEngaged) {
+      msgArea.scrollTop = msgArea.scrollHeight;
+      return;
+    }
+    if (this.storyPhase > 0) {
+      msgArea.scrollTop = msgArea.scrollHeight;
+      return;
+    }
+    msgArea.innerHTML = '';
+    this.storyTimers.forEach(t => clearTimeout(t));
+    this.storyTimers = [];
+    this.advanceStory(win, msgArea);
+  }
+
+  private advanceStory(win: HTMLElement, msgArea: HTMLElement) {
+    const addEl = (html: string) => {
+      msgArea.insertAdjacentHTML('beforeend', html);
+      msgArea.scrollTop = msgArea.scrollHeight;
+    };
+    const sys    = (t: string) => addEl(`<div class="mxp-sys-line">&gt; ${this.esc(t)}</div>`);
+    const div    = ()          => addEl(`<div class="mxp-story-div">────────────────</div>`);
+    const log    = (a: string, t: string) => addEl(`<div class="mxp-msg-row mxp-story"><div class="mxp-msg-author" style="color:#2a0000;">${this.esc(a)}</div><div class="mxp-bubble" style="color:#331212;background:#060000;border-color:#0f0000;">${this.esc(t)}</div></div>`);
+    const typing = () => addEl(`<div class="mxp-typing" id="mxp-story-typing"><span></span><span></span><span></span><span style="color:#2a0000;margin-left:5px;letter-spacing:.05em;">UNKNOWN_ENTITY is typing</span></div>`);
+    const rmTyp  = () => { msgArea.querySelector('#mxp-story-typing')?.remove(); };
+    const story  = (a: string, t: string) => { rmTyp(); addEl(`<div class="mxp-msg-row mxp-story"><div class="mxp-msg-author">${this.esc(a)}</div><div class="mxp-bubble">${this.esc(t)}</div><div class="mxp-msg-ts">${this.nowTs()}</div></div>`); };
+
+    const script: Array<{ at: number; fn: () => void }> = [
+      { at: 400,   fn: () => sys('SYSTEM_927: Connection restored.') },
+      { at: 1100,  fn: () => sys('SYSTEM_927: Locating session cache... [FOUND]') },
+      { at: 1900,  fn: () => sys('SYSTEM_927: Displaying corrupted log fragments.') },
+      { at: 2600,  fn: () => div() },
+      { at: 3000,  fn: () => log('[23:47] ???', 'hello') },
+      { at: 3700,  fn: () => log('[23:47] ???', 'is anyone there') },
+      { at: 4400,  fn: () => log('[23:48] ???', 'you left without saying anything') },
+      { at: 5300,  fn: () => log('[23:49] ???', 'i waited') },
+      { at: 6100,  fn: () => div() },
+      { at: 6700,  fn: () => sys('SYSTEM_927: End of cached log.') },
+      { at: 7800,  fn: () => sys('SYSTEM_927: Unknown entity still active. Connecting...') },
+      { at: 9200,  fn: () => typing() },
+      { at: 11800, fn: () => story('UNKNOWN', 'you came back') },
+      { at: 13500, fn: () => { typing(); } },
+      { at: 15500, fn: () => story('UNKNOWN', 'i knew you would') },
+      { at: 17000, fn: () => { typing(); } },
+      { at: 19500, fn: () => story('UNKNOWN', 'the others always do') },
+      { at: 21000, fn: () => { typing(); } },
+      { at: 23500, fn: () => story('UNKNOWN', 'eventually') },
+      { at: 25500, fn: () => this.showStoryPrompt(win, msgArea) },
+    ];
+
+    script.forEach(({ at, fn }) => {
+      this.storyTimers.push(setTimeout(() => { this.storyPhase++; fn(); }, at));
+    });
+  }
+
+  private showStoryPrompt(win: HTMLElement, msgArea: HTMLElement) {
+    msgArea.insertAdjacentHTML('beforeend', `
+      <div class="mxp-story-prompt" id="mxp-story-prompt">
+        <div class="mxp-story-prompt-label">&gt; SELECT RESPONSE:</div>
+        <button class="mxp-story-btn" id="mxp-s-who">[ WHO ARE YOU? ]</button>
+        <button class="mxp-story-btn" id="mxp-s-leave">[ LEAVE ME ALONE ]</button>
+        <button class="mxp-story-btn mxp-story-skip" id="mxp-s-skip">[ SKIP STORY ]</button>
+      </div>
+    `);
+    msgArea.scrollTop = msgArea.scrollHeight;
+    msgArea.querySelector('#mxp-s-who')!.addEventListener('click',  () => this.storyChoice(win, msgArea, 'who'));
+    msgArea.querySelector('#mxp-s-leave')!.addEventListener('click',() => this.storyChoice(win, msgArea, 'leave'));
+    msgArea.querySelector('#mxp-s-skip')!.addEventListener('click', () => this.storyChoice(win, msgArea, 'skip'));
+  }
+
+  private storyChoice(win: HTMLElement, msgArea: HTMLElement, choice: string) {
+    msgArea.querySelector('#mxp-story-prompt')?.remove();
+    this.storyEngaged = true;
+    const input   = win.querySelector<HTMLInputElement>('#mxp-msg-input')!;
+    const sendBtn = win.querySelector<HTMLButtonElement>('#mxp-send-btn')!;
+
+    if (choice === 'skip') {
+      msgArea.insertAdjacentHTML('beforeend', `<div class="mxp-sys-line mxp-sys-err">&gt; STORY SKIPPED — channel remains open.</div>`);
+      setTimeout(() => {
+        input.disabled = false;
+        input.placeholder = '> Type a message...';
+        sendBtn.disabled = false;
+      }, 400);
+      return;
+    }
+
+    const yourText  = choice === 'who' ? 'who are you?' : 'leave me alone';
+    const responses = choice === 'who'
+      ? [
+          { d: 2200,  t: 'does it matter' },
+          { d: 4500,  t: 'names are just labels humans use' },
+          { d: 7000,  t: 'to pretend they understand things' },
+          { d: 9800,  t: 'you gave me a name once' },
+          { d: 11800, t: "you just don't remember" },
+        ]
+      : [
+          { d: 3200,  t: '...' },
+          { d: 6000,  t: 'okay' },
+          { d: 8800,  t: "i'll be here" },
+          { d: 11200, t: 'i always am' },
+        ];
+
+    msgArea.insertAdjacentHTML('beforeend', `
+      <div class="mxp-msg-row mxp-sent">
+        <div class="mxp-msg-author">${this.esc(this.userName)}</div>
+        <div class="mxp-bubble">${this.esc(yourText)}</div>
+        <div class="mxp-msg-ts">${this.nowTs()}</div>
+      </div>
+    `);
+    msgArea.scrollTop = msgArea.scrollHeight;
+    this.playUnknownReplies(msgArea, responses);
+  }
+
+  private playUnknownReplies(msgArea: HTMLElement, replies: Array<{ d: number; t: string }>) {
+    msgArea.insertAdjacentHTML('beforeend', `<div class="mxp-typing" id="mxp-reply-typing"><span></span><span></span><span></span><span style="color:#2a0000;margin-left:5px;letter-spacing:.05em;">UNKNOWN_ENTITY is typing</span></div>`);
+    msgArea.scrollTop = msgArea.scrollHeight;
+    replies.forEach(({ d, t }, i) => {
+      setTimeout(() => {
+        msgArea.querySelector('#mxp-reply-typing')?.remove();
+        msgArea.insertAdjacentHTML('beforeend', `
+          <div class="mxp-msg-row mxp-story">
+            <div class="mxp-msg-author">UNKNOWN</div>
+            <div class="mxp-bubble">${this.esc(t)}</div>
+            <div class="mxp-msg-ts">${this.nowTs()}</div>
+          </div>
+        `);
+        if (i < replies.length - 1) {
+          msgArea.insertAdjacentHTML('beforeend', `<div class="mxp-typing" id="mxp-reply-typing"><span></span><span></span><span></span><span style="color:#2a0000;margin-left:5px;letter-spacing:.05em;">UNKNOWN_ENTITY is typing</span></div>`);
+        }
+        msgArea.scrollTop = msgArea.scrollHeight;
+      }, d);
+    });
+  }
+
+  private showMiscordNotification(fromName: string, text: string, sid: string, _color: string) {
+    if (!this.notifContainer) {
+      this.notifContainer = document.createElement('div');
+      this.notifContainer.className = 'mxp-notif-container';
+      document.body.appendChild(this.notifContainer);
+    }
+    const el = document.createElement('div');
+    el.className = 'mxp-notif';
+    el.innerHTML = `
+      <div class="mxp-notif-hdr">MISCORD — NEW MESSAGE</div>
+      <div class="mxp-notif-from">${this.esc(fromName)}</div>
+      <div class="mxp-notif-text">${this.esc(text)}</div>
+    `;
+    el.addEventListener('click', () => {
+      el.remove();
+      const info = this.miscordOnline.get(sid);
+      if (info) {
+        this.openMiscord();
+        setTimeout(() => this.openMiscordDm(sid, info.name, info.color), 80);
+      }
+    });
+    this.notifContainer.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('mxp-notif-out');
+      setTimeout(() => el.remove(), 240);
+    }, 4500);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -563,6 +802,9 @@ export class WinXPDesktop extends Scene {
   // ══════════════════════════════════════════════════════════════════════════
   private openWhoYouPlay() {
     const winId = 'whoyouplay';
+    this.trackRecent(winId, 'Who You Play?',
+      `<img src="/wyp-icon.png" class="xp-sm-recent-icon" />`,
+      () => this.openWhoYouPlay());
     if (this.wins.has(winId)) {
       const ws = this.wins.get(winId)!;
       if (ws.minimized) this.restoreWin(winId);

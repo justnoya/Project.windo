@@ -1,0 +1,3 @@
+- [Miscord horror redesign](miscord-horror.md) — full CSS+TS horror theme applied; UNKNOWN_ENTITY story + notification system wired in
+- [Start menu architecture](start-menu.md) — recently-opened tracking replaces static links; Shutdown + Restart in footer
+- [Server URL](server-url.md) — Pterodactyl at goatpanel.duckdns.org:3002 confirmed reachable; Replit dev server on port 3001
