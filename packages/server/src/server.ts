@@ -44,6 +44,11 @@ if (process.env.NODE_ENV === "production") {
   app.use(express.static(clientBuildPath));
 }
 
+// Health check endpoint
+router.get("/health", (_req: Request, res: Response) => {
+  res.json({ ok: true });
+});
+
 // If you don't want people accessing your server stats, comment this line.
 router.use("/colyseus", monitor(server as Partial<MonitorOptions>));
 

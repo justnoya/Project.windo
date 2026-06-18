@@ -1478,6 +1478,30 @@
   margin-top: 4px;
 }
 
+.gm-conn-status {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 8px 0 2px;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 8px; text-align: center;
+  min-height: 22px;
+}
+.gm-conn-checking {
+  color: #aaa;
+  animation: gm-blink 0.9s step-start infinite;
+}
+@keyframes gm-blink { 50% { opacity: 0.3; } }
+.gm-conn-ok  { color: #43b581; }
+.gm-conn-err { color: #f04747; }
+.gm-conn-retry-btn {
+  background: none; border: 1px solid #f04747; color: #f04747;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 7px; padding: 3px 8px; cursor: pointer;
+  border-radius: 2px; letter-spacing: 0.05em;
+  transition: background 0.15s;
+}
+.gm-conn-retry-btn:hover { background: rgba(240,71,71,0.15); }
+.gm-btn:disabled { opacity: 0.45; pointer-events: none; }
+
 /* ════════════════════════════════════════
    MULTIPLAYER LOBBY
    ════════════════════════════════════════ */

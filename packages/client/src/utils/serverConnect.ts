@@ -1,5 +1,16 @@
 import { Client, Room } from 'colyseus.js';
 
+export async function checkServerHealth(): Promise<boolean> {
+  try {
+    const { httpBase } = getServerEndpoints();
+    const res = await fetch(`${httpBase}/health`, { signal: AbortSignal.timeout(4000) });
+    const data = await res.json() as { ok?: boolean };
+    return res.ok && data.ok === true;
+  } catch {
+    return false;
+  }
+}
+
 export function getServerEndpoints(): { httpBase: string; wsBase: string } {
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
