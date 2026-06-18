@@ -62,3 +62,8 @@ externalPort = 80
 deploymentTarget = "vm"
 run = ["bash", "-c", "cd packages/server && node dist/server.js"]
 build = ["bash", "-c", "cd packages/client && npm run build && cd ../server && npm run build"]
+
+[userenv]
+
+[userenv.shared]
+VITE_CLIENT_ID = "1516867540264161472"
