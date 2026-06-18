@@ -6,8 +6,7 @@ export class Boot extends Scene {
   }
 
   preload() {
-    this.load.setPath("/.proxy/assets");
-    this.load.image("bliss", "bliss.jpeg");
+    this.load.image("bliss", "/assets/bliss.jpeg");
   }
 
   create() {

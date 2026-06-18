@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "buildCommand": "cd packages/client && npm install && npm run build",
+  "outputDirectory": "packages/client/dist",
+  "rewrites": [
+    { "source": "/.proxy/api/token", "destination": "/api/token" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
+    }
+  ],
+  "env": {
+    "VITE_CLIENT_ID": "@vite_client_id",
+    "CLIENT_SECRET": "@client_secret"
+  }
+}
