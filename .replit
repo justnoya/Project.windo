@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web"]
+modules = ["nodejs-20", "web", "bash"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -31,7 +31,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd packages/client && npm run build && fuser -k 5000/tcp 2>/dev/null; sleep 1 && npm run preview"
+args = "cd packages/client && npx vite build && fuser -k 5000/tcp 2>/dev/null; sleep 1 && npx vite preview --port 5000 --host 0.0.0.0 --strictPort"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -43,7 +43,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd packages/server && npm run start"
+args = "cd packages/server && npx tsc && node ./dist/server.js"
 waitForPort = 3001
 
 [[ports]]
