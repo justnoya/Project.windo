@@ -6,6 +6,8 @@ import { Boot } from "./scenes/Boot";
 import { SplashScreen } from "./scenes/SplashScreen";
 import { Preloader } from "./scenes/Preloader";
 import { LoginScreen } from "./scenes/LoginScreen";
+import { GameMenu } from "./scenes/GameMenu";
+import { MultiplayerLobby } from "./scenes/MultiplayerLobby";
 import { WinXPDesktop } from "./scenes/WinXPDesktop";
 
 (async () => {
@@ -19,6 +21,6 @@ import { WinXPDesktop } from "./scenes/WinXPDesktop";
     backgroundColor: "#000000",
     roundPixels: false,
     pixelArt: false,
-    scene: [Boot, SplashScreen, Preloader, LoginScreen, WinXPDesktop],
+    scene: [Boot, SplashScreen, Preloader, LoginScreen, GameMenu, MultiplayerLobby, WinXPDesktop],
   });
 })();

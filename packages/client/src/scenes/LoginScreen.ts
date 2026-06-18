@@ -1,5 +1,6 @@
 import { Scene } from "phaser";
 import { authorizeDiscordUser, getUserName, getUserAvatar, setDisplayName, getIsEmbedded } from "../utils/discordSDK";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { SoundManager } from "../utils/SoundManager";
 
 export class LoginScreen extends Scene {
@@ -48,7 +49,7 @@ export class LoginScreen extends Scene {
   // Discord mode — avatar + name from Discord, one click to begin
   private renderDiscordLogin(username: string, avatarUrl: string | null) {
     const avatarHtml = avatarUrl
-      ? `<img class="login-avatar-img" src="${avatarUrl}" alt="avatar" />`
+      ? `<img class="login-avatar-img" src="${avatarUrl}" alt="avatar" loading="eager" />`
       : `<div class="login-avatar-placeholder">${(username[0] || "U").toUpperCase()}</div>`;
 
     this.overlay.innerHTML = `
@@ -56,11 +57,11 @@ export class LoginScreen extends Scene {
         ${this.topBarHtml("To begin, click your user name")}
 
         <div class="login-center">
-          <div class="login-user-card" id="login-user-card" tabindex="0">
-            <div class="login-avatar-wrap">${avatarHtml}</div>
+          <div class="login-user-card login-discord-card" id="login-user-card" tabindex="0">
+            <div class="login-avatar-wrap login-avatar-discord">${avatarHtml}</div>
             <div class="login-user-info">
               <div class="login-username">${this.esc(username || "User")}</div>
-              <div class="login-subtitle">Click to log on</div>
+              <div class="login-subtitle login-dc-tag">Discord Activity</div>
               <button class="login-begin-btn" id="login-begin-btn">
                 <span class="login-btn-arrow">▶</span> Log On
               </button>
@@ -72,7 +73,7 @@ export class LoginScreen extends Scene {
       </div>
     `;
 
-    const begin = () => { SoundManager.loginSuccess(); this.transitionToDesktop(); };
+    const begin = () => { SoundManager.loginSuccess(); this.transitionToGameMenu(); };
     document.getElementById("login-user-card")?.addEventListener("click", begin);
     document.getElementById("login-begin-btn")?.addEventListener("click", (e) => { e.stopPropagation(); begin(); });
     document.getElementById("login-turnoff")?.addEventListener("click", () => window.close());
@@ -128,7 +129,7 @@ export class LoginScreen extends Scene {
       const name = input?.value.trim() || "User";
       setDisplayName(name);
       SoundManager.loginSuccess();
-      this.transitionToDesktop();
+      this.transitionToGameMenu();
     };
 
     document.getElementById("login-begin-btn")?.addEventListener("click", begin);
@@ -168,12 +169,12 @@ export class LoginScreen extends Scene {
     return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 
-  private transitionToDesktop() {
+  private transitionToGameMenu() {
     this.overlay.style.transition = "opacity 0.5s";
     this.overlay.style.opacity = "0";
     this.time.delayedCall(500, () => {
       this.cleanup();
-      this.scene.start("WinXPDesktop");
+      this.scene.start("GameMenu");
     });
   }
 

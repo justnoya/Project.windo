@@ -87,7 +87,7 @@ let _displayName: string | null = null;
 const getUserName = () => {
   if (_displayName) return _displayName;
   if (!auth) return "User";
-  return auth.user.username;
+  return (auth.user as any).global_name || auth.user.username;
 };
 
 const setDisplayName = (name: string) => { _displayName = name; };
@@ -95,8 +95,12 @@ const setDisplayName = (name: string) => { _displayName = name; };
 const getUserAvatar = (): string | null => {
   if (!auth) return null;
   const { id, avatar } = auth.user;
-  if (avatar) return `https://cdn.discordapp.com/avatars/${id}/${avatar}.png?size=128`;
-  return null;
+  if (avatar) {
+    const ext = avatar.startsWith('a_') ? 'gif' : 'webp';
+    return `https://cdn.discordapp.com/avatars/${id}/${avatar}.${ext}?size=256`;
+  }
+  const defaultIdx = Math.abs(Number(BigInt(id) >> 22n) % 6);
+  return `https://cdn.discordapp.com/embed/avatars/${defaultIdx}.png`;
 };
 
 enum SessionStorageQueryParam {

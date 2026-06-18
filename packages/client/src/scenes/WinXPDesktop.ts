@@ -1,6 +1,7 @@
 import { Scene } from "phaser";
 import { Room, Client } from "colyseus.js";
 import { getUserName } from "../utils/discordSDK";
+import { gameState } from "../utils/gameState";
 import { SoundManager } from "../utils/SoundManager";
 import { VirtualFileSystem } from "../fileSystem";
 import { FileExplorer } from "../FileExplorer";
@@ -114,7 +115,16 @@ export class WinXPDesktop extends Scene {
     this.time.delayedCall(300, () => SoundManager.startup());
 
     // ── Multiplayer ───────────────────────────────────────────────────────────
-    this.connectServer();
+    if (gameState.mode === 'single') {
+      console.log('[XP] Single player mode — skipping server connection');
+    } else if (gameState.room) {
+      this.room = gameState.room;
+      gameState.room = null;
+      this.setupRoomHandlers();
+      this.room.send('presence', { name: this.userName });
+    } else {
+      this.connectServer();
+    }
 
     // ── Cleanup ───────────────────────────────────────────────────────────────
     this.events.once('shutdown', this.cleanup, this);
@@ -1236,6 +1246,52 @@ export class WinXPDesktop extends Scene {
   // ══════════════════════════════════════════════════════════════════════════
   // MULTIPLAYER
   // ══════════════════════════════════════════════════════════════════════════
+  private setupRoomHandlers() {
+    if (!this.room) return;
+    this.room.onMessage('cursor', (d: { sessionId: string; x: number; y: number; name: string; color: string }) => {
+      this.renderPeerCursor(d);
+      this.miscordOnline.set(d.sessionId, { name: d.name, color: d.color });
+      this.refreshMiscordFriends();
+      if (!this.wyp_players.has(d.sessionId))
+        this.wyp_players.set(d.sessionId, { name: d.name, color: d.color, ready: false, hints: [], revealed: false });
+    });
+    this.room.onMessage('playerLeft', (d: { sessionId: string }) => {
+      this.pCursors.get(d.sessionId)?.remove();
+      this.pCursors.delete(d.sessionId);
+      this.miscordOnline.delete(d.sessionId);
+      this.wyp_players.delete(d.sessionId);
+      if (this.miscordActiveFriend === d.sessionId) this.miscordActiveFriend = null;
+      this.refreshMiscordFriends();
+      const wypWin = document.getElementById('win-whoyouplay');
+      if (wypWin && this.wyp_phase === 'play') this.wyp_refreshPlayers(wypWin);
+    });
+    this.room.onMessage('presence', (d: { sessionId: string; name: string; color: string }) => {
+      this.miscordOnline.set(d.sessionId, { name: d.name, color: d.color });
+      this.refreshMiscordFriends();
+      if (!this.wyp_players.has(d.sessionId))
+        this.wyp_players.set(d.sessionId, { name: d.name, color: d.color, ready: false, hints: [], revealed: false });
+      const wypWin = document.getElementById('win-whoyouplay');
+      if (wypWin && this.wyp_phase === 'play') this.wyp_refreshPlayers(wypWin);
+    });
+    this.room.onMessage('chat', (d: { from: string; fromName: string; to: string; text: string; ts: number }) => {
+      this.onMiscordChat(d);
+    });
+    this.room.onMessage('wyp:ready',  (d: { sessionId: string; name: string })  => this.wyp_onReady(d));
+    this.room.onMessage('wyp:hint',   (d: { sessionId: string; hint: string })  => this.wyp_onHint(d));
+    this.room.onMessage('wyp:guess',  (d: { from: string; fromName: string; targetId: string; guess: string }) => this.wyp_onGuess(d));
+    this.room.onMessage('wyp:reveal', (d: { sessionId: string; character: string; emoji: string; guesserName: string }) => this.wyp_onReveal(d));
+    this.room.onMessage('wyp:reset',  () => this.wyp_onReset());
+    this.room.onMessage('note:add',    (d: StickyNote) => this.renderNote(d));
+    this.room.onMessage('note:move',   (d: { id: string; x: number; y: number }) => {
+      const el = this.stickyNotes.get(d.id);
+      if (el) { el.style.left = d.x + 'px'; el.style.top = d.y + 'px'; }
+    });
+    this.room.onMessage('note:delete', (d: { id: string }) => {
+      this.stickyNotes.get(d.id)?.remove();
+      this.stickyNotes.delete(d.id);
+    });
+  }
+
   private async connectServer() {
     try {
       const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -1270,53 +1326,7 @@ export class WinXPDesktop extends Scene {
       });
       console.log('[XP] Colyseus connected ✓');
 
-      this.room!.onMessage('cursor', (d: { sessionId: string; x: number; y: number; name: string; color: string }) => {
-        this.renderPeerCursor(d);
-        this.miscordOnline.set(d.sessionId, { name: d.name, color: d.color });
-        this.refreshMiscordFriends();
-        if (!this.wyp_players.has(d.sessionId))
-          this.wyp_players.set(d.sessionId, { name: d.name, color: d.color, ready: false, hints: [], revealed: false });
-      });
-      this.room!.onMessage('playerLeft', (d: { sessionId: string }) => {
-        this.pCursors.get(d.sessionId)?.remove();
-        this.pCursors.delete(d.sessionId);
-        this.miscordOnline.delete(d.sessionId);
-        this.wyp_players.delete(d.sessionId);
-        if (this.miscordActiveFriend === d.sessionId) this.miscordActiveFriend = null;
-        this.refreshMiscordFriends();
-        const wypWin = document.getElementById('win-whoyouplay');
-        if (wypWin && this.wyp_phase === 'play') this.wyp_refreshPlayers(wypWin);
-      });
-
-      this.room!.onMessage('presence', (d: { sessionId: string; name: string; color: string }) => {
-        this.miscordOnline.set(d.sessionId, { name: d.name, color: d.color });
-        this.refreshMiscordFriends();
-        if (!this.wyp_players.has(d.sessionId))
-          this.wyp_players.set(d.sessionId, { name: d.name, color: d.color, ready: false, hints: [], revealed: false });
-        const wypWin = document.getElementById('win-whoyouplay');
-        if (wypWin && this.wyp_phase === 'play') this.wyp_refreshPlayers(wypWin);
-      });
-      this.room!.onMessage('chat', (d: { from: string; fromName: string; to: string; text: string; ts: number }) => {
-        this.onMiscordChat(d);
-      });
-
-      this.room!.onMessage('wyp:ready',  (d: { sessionId: string; name: string })  => this.wyp_onReady(d));
-      this.room!.onMessage('wyp:hint',   (d: { sessionId: string; hint: string })  => this.wyp_onHint(d));
-      this.room!.onMessage('wyp:guess',  (d: { from: string; fromName: string; targetId: string; guess: string }) => this.wyp_onGuess(d));
-      this.room!.onMessage('wyp:reveal', (d: { sessionId: string; character: string; emoji: string; guesserName: string }) => this.wyp_onReveal(d));
-      this.room!.onMessage('wyp:reset',  () => this.wyp_onReset());
-
-      this.room!.onMessage('note:add',    (d: StickyNote) => this.renderNote(d));
-      this.room!.onMessage('note:move',   (d: { id: string; x: number; y: number }) => {
-        const el = this.stickyNotes.get(d.id);
-        if (el) { el.style.left = d.x + 'px'; el.style.top = d.y + 'px'; }
-      });
-      this.room!.onMessage('note:delete', (d: { id: string }) => {
-        this.stickyNotes.get(d.id)?.remove();
-        this.stickyNotes.delete(d.id);
-      });
-
-      // Announce presence so others can see us in Miscord
+      this.setupRoomHandlers();
       this.room!.send('presence', { name: this.userName });
 
     } catch (err) {
