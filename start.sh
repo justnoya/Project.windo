@@ -10,7 +10,7 @@ echo ""
 # ── Install production dependencies only ─────
 echo "[1/2] Installing server dependencies..."
 cd packages/server
-npm install --omit=dev --no-audit --no-fund
+npm install --omit=dev --no-audit --no-fund --registry=https://registry.npmjs.org
 echo "      Done."
 cd ../..
 
