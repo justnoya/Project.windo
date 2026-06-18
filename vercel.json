@@ -17,7 +17,7 @@
     }
   ],
   "env": {
-    "VITE_CLIENT_ID": "@vite_client_id",
+    "VITE_CLIENT_ID": "1516867540264161472",
     "CLIENT_SECRET": "@client_secret"
   }
 }
