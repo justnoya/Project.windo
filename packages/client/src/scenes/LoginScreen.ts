@@ -1,5 +1,5 @@
 import { Scene } from "phaser";
-import { authorizeDiscordUser, getUserName, getUserId, getIsEmbedded } from "../utils/discordSDK";
+import { authorizeDiscordUser, getUserName, getUserAvatar, setDisplayName, getIsEmbedded } from "../utils/discordSDK";
 import { SoundManager } from "../utils/SoundManager";
 
 export class LoginScreen extends Scene {
@@ -11,11 +11,9 @@ export class LoginScreen extends Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(0x000000);
-
     this.overlay = document.createElement("div");
     this.overlay.id = "login-overlay";
     document.body.appendChild(this.overlay);
-
     this.renderLoading();
 
     (async () => {
@@ -26,18 +24,16 @@ export class LoginScreen extends Scene {
       }
 
       const isEmbedded = getIsEmbedded();
-      if (!isEmbedded) {
-        SoundManager.loginSuccess();
-        this.time.delayedCall(600, () => {
-          this.transitionToDesktop();
-        });
-        return;
-      }
+      const username = getUserName() || "";
+      const avatarUrl = getUserAvatar();
 
-      const username = getUserName() || "User";
-      const userId = getUserId() || "";
       SoundManager.loginChime();
-      this.renderLoginScreen(username, userId);
+
+      if (isEmbedded) {
+        this.renderDiscordLogin(username, avatarUrl);
+      } else {
+        this.renderWebLogin(username);
+      }
     })();
   }
 
@@ -49,100 +45,130 @@ export class LoginScreen extends Scene {
     `;
   }
 
-  private renderLoginScreen(username: string, userId: string) {
+  // Discord mode — avatar + name from Discord, one click to begin
+  private renderDiscordLogin(username: string, avatarUrl: string | null) {
+    const avatarHtml = avatarUrl
+      ? `<img class="login-avatar-img" src="${avatarUrl}" alt="avatar" />`
+      : `<div class="login-avatar-placeholder">${(username[0] || "U").toUpperCase()}</div>`;
+
     this.overlay.innerHTML = `
       <div class="login-bg">
-        <div class="login-top-bar">
-          <div class="login-top-left">
-            <span class="login-top-title">Windows <span class="login-top-xp">XP</span></span>
-          </div>
-          <div class="login-top-divider"></div>
-          <div class="login-top-subtitle">To begin, click your user name</div>
-        </div>
+        ${this.topBarHtml("To begin, click your user name")}
 
         <div class="login-center">
-          <div class="login-user-card" id="login-user-card">
-            <div class="login-avatar">
-              <span class="login-avatar-icon">👤</span>
-            </div>
+          <div class="login-user-card" id="login-user-card" tabindex="0">
+            <div class="login-avatar-wrap">${avatarHtml}</div>
             <div class="login-user-info">
-              <div class="login-username">${username}</div>
-              <div class="login-password-row" id="login-password-row" style="display:none;">
-                <input
-                  type="password"
-                  id="login-password-input"
-                  class="login-password-input"
-                  placeholder="Type your user ID"
-                  autocomplete="off"
-                  maxlength="64"
-                />
-                <button class="login-arrow-btn" id="login-arrow-btn" title="Log On">▶</button>
-                <div class="login-hint">Password hint: your Discord User ID</div>
-              </div>
-              <div class="login-error" id="login-error" style="display:none;">Incorrect password. Try again.</div>
+              <div class="login-username">${this.esc(username || "User")}</div>
+              <div class="login-subtitle">Click to log on</div>
+              <button class="login-begin-btn" id="login-begin-btn">
+                <span class="login-btn-arrow">▶</span> Log On
+              </button>
             </div>
           </div>
         </div>
 
-        <div class="login-bottom-bar">
-          <div class="login-bottom-actions">
-            <button class="login-bottom-btn" id="login-turnoff">⏻ Turn Off Computer</button>
-          </div>
-          <div class="login-bottom-logo">
-            <span class="login-bottom-windows">Windows</span>
-            <span class="login-bottom-xp">XP</span>
-          </div>
-        </div>
+        ${this.bottomBarHtml()}
       </div>
     `;
 
-    const card = document.getElementById("login-user-card");
-    const passwordRow = document.getElementById("login-password-row") as HTMLElement;
-    const input = document.getElementById("login-password-input") as HTMLInputElement;
-    const arrowBtn = document.getElementById("login-arrow-btn");
-    const errorEl = document.getElementById("login-error") as HTMLElement;
-    const turnOff = document.getElementById("login-turnoff");
+    const begin = () => { SoundManager.loginSuccess(); this.transitionToDesktop(); };
+    document.getElementById("login-user-card")?.addEventListener("click", begin);
+    document.getElementById("login-begin-btn")?.addEventListener("click", (e) => { e.stopPropagation(); begin(); });
+    document.getElementById("login-turnoff")?.addEventListener("click", () => window.close());
+  }
 
-    let expanded = false;
+  // Web / dev mode — name input, no validation, just begin
+  private renderWebLogin(prefillName: string) {
+    this.overlay.innerHTML = `
+      <div class="login-bg">
+        ${this.topBarHtml("Enter your name to begin")}
 
-    card?.addEventListener("click", (e) => {
-      if (!expanded) {
-        expanded = true;
-        passwordRow.style.display = "flex";
-        input?.focus();
-      }
+        <div class="login-center">
+          <div class="login-user-card login-web-card">
+            <div class="login-avatar-wrap">
+              <div class="login-avatar-placeholder" id="login-av-placeholder">?</div>
+            </div>
+            <div class="login-user-info">
+              <label class="login-name-label">Your Name</label>
+              <div class="login-name-row">
+                <input
+                  type="text"
+                  id="login-name-input"
+                  class="login-name-input"
+                  placeholder="Enter your name…"
+                  value="${this.esc(prefillName)}"
+                  maxlength="32"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <button class="login-begin-btn" id="login-begin-btn" title="Begin">
+                  <span class="login-btn-arrow">▶</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        ${this.bottomBarHtml()}
+      </div>
+    `;
+
+    const input = document.getElementById("login-name-input") as HTMLInputElement;
+    const placeholder = document.getElementById("login-av-placeholder") as HTMLElement;
+
+    // Live-update the avatar letter as they type
+    input?.addEventListener("input", () => {
+      const v = input.value.trim();
+      placeholder.textContent = v ? v[0].toUpperCase() : "?";
     });
+    if (prefillName) placeholder.textContent = prefillName[0].toUpperCase();
 
-    const tryLogin = () => {
-      const entered = input?.value.trim() || "";
-      if (entered === userId || entered === "") {
-        errorEl.style.display = "none";
-        this.transitionToDesktop();
-      } else {
-        errorEl.style.display = "block";
-        input.value = "";
-        input.classList.add("login-shake");
-        setTimeout(() => input.classList.remove("login-shake"), 500);
-      }
+    const begin = () => {
+      const name = input?.value.trim() || "User";
+      setDisplayName(name);
+      SoundManager.loginSuccess();
+      this.transitionToDesktop();
     };
 
-    arrowBtn?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      tryLogin();
-    });
+    document.getElementById("login-begin-btn")?.addEventListener("click", begin);
+    input?.addEventListener("keydown", (e) => { if (e.key === "Enter") begin(); });
+    input?.focus();
 
-    input?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") tryLogin();
-      errorEl.style.display = "none";
-    });
+    document.getElementById("login-turnoff")?.addEventListener("click", () => window.close());
+  }
 
-    turnOff?.addEventListener("click", () => {
-      window.close();
-    });
+  private topBarHtml(subtitle: string) {
+    return `
+      <div class="login-top-bar">
+        <div class="login-top-left">
+          <span class="login-top-title">Windows <span class="login-top-xp">XP</span></span>
+        </div>
+        <div class="login-top-divider"></div>
+        <div class="login-top-subtitle">${subtitle}</div>
+      </div>
+    `;
+  }
+
+  private bottomBarHtml() {
+    return `
+      <div class="login-bottom-bar">
+        <div class="login-bottom-actions">
+          <button class="login-bottom-btn" id="login-turnoff">⏻ Turn Off Computer</button>
+        </div>
+        <div class="login-bottom-logo">
+          <span class="login-bottom-windows">Windows</span>
+          <span class="login-bottom-xp">XP</span>
+        </div>
+      </div>
+    `;
+  }
+
+  private esc(s: string) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 
   private transitionToDesktop() {
-    SoundManager.loginSuccess();
     this.overlay.style.transition = "opacity 0.5s";
     this.overlay.style.opacity = "0";
     this.time.delayedCall(500, () => {
@@ -152,12 +178,8 @@ export class LoginScreen extends Scene {
   }
 
   private cleanup() {
-    if (this.overlay && this.overlay.parentNode) {
-      this.overlay.parentNode.removeChild(this.overlay);
-    }
+    if (this.overlay?.parentNode) this.overlay.parentNode.removeChild(this.overlay);
   }
 
-  shutdown() {
-    this.cleanup();
-  }
+  shutdown() { this.cleanup(); }
 }

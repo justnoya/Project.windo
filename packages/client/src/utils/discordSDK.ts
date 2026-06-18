@@ -82,12 +82,21 @@ const authorizeDiscordUser = async () => {
   });
 };
 
-const getUserName = () => {
-  if (!auth) {
-    return "User";
-  }
+let _displayName: string | null = null;
 
+const getUserName = () => {
+  if (_displayName) return _displayName;
+  if (!auth) return "User";
   return auth.user.username;
+};
+
+const setDisplayName = (name: string) => { _displayName = name; };
+
+const getUserAvatar = (): string | null => {
+  if (!auth) return null;
+  const { id, avatar } = auth.user;
+  if (avatar) return `https://cdn.discordapp.com/avatars/${id}/${avatar}.png?size=128`;
+  return null;
 };
 
 enum SessionStorageQueryParam {
@@ -120,4 +129,4 @@ const getUserId = () => {
   return auth.user.id;
 };
 
-export { discordSdk, initiateDiscordSDK, authorizeDiscordUser, getUserName, getUserId, getIsEmbedded };
+export { discordSdk, initiateDiscordSDK, authorizeDiscordUser, getUserName, setDisplayName, getUserAvatar, getUserId, getIsEmbedded };
