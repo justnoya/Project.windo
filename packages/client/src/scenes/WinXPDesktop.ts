@@ -18,6 +18,8 @@ const CURSOR_COLORS = ['#FF4444','#4488FF','#44CC88','#FFAA44','#AA44FF','#FF44A
 export class WinXPDesktop extends Scene {
   private bg!: Phaser.GameObjects.Image;
   private overlay!: HTMLDivElement;
+  private touchCursor!: HTMLDivElement;
+  private touchHide: ReturnType<typeof setTimeout> | null = null;
   private fs!: VirtualFileSystem;
   private room: Room | null = null;
   private wins = new Map<string, WinState>();
@@ -28,49 +30,55 @@ export class WinXPDesktop extends Scene {
   private clockTick: ReturnType<typeof setInterval> | null = null;
   private lastCurSend = 0;
   private userName = 'User';
+  private isMobile = false;
 
   constructor() { super('WinXPDesktop'); }
 
   create() {
     const W = this.scale.width, H = this.scale.height;
+    this.isMobile = window.innerWidth < 768 || ('ontouchstart' in window);
 
-    // ── Phaser background ───────────────────────────────────────────────────────
+    // ── Phaser background ─────────────────────────────────────────────────────
     if (this.textures.exists('bliss')) {
       this.bg = this.add.image(W / 2, H / 2, 'bliss').setDisplaySize(W, H);
     } else {
-      this.cameras.main.setBackgroundColor(0x3C8820);
+      this.cameras.main.setBackgroundColor(0x3a8820);
     }
-
     this.scale.on('resize', (gs: Phaser.Structs.Size) => {
-      if (this.bg) { this.bg.setPosition(gs.width / 2, gs.height / 2).setDisplaySize(gs.width, gs.height); }
+      if (this.bg) this.bg.setPosition(gs.width / 2, gs.height / 2).setDisplaySize(gs.width, gs.height);
     }, this);
 
-    // ── DOM overlay ─────────────────────────────────────────────────────────────
+    // ── DOM overlay — fixed to viewport so it ALWAYS covers full screen ────────
     this.overlay = document.createElement('div');
     this.overlay.className = 'xp-overlay';
-    document.getElementById('gameParent')!.appendChild(this.overlay);
+    document.body.appendChild(this.overlay);           // ← body, not #gameParent
 
-    // ── Virtual FS ──────────────────────────────────────────────────────────────
+    // ── Mobile touch-cursor ───────────────────────────────────────────────────
+    this.touchCursor = document.createElement('div');
+    this.touchCursor.className = 'xp-touch-cursor';
+    document.body.appendChild(this.touchCursor);
+
+    // ── Virtual FS + user ────────────────────────────────────────────────────
     this.fs = new VirtualFileSystem();
     this.userName = getUserName() || 'User';
 
-    // ── Build UI ────────────────────────────────────────────────────────────────
+    // ── Build UI ─────────────────────────────────────────────────────────────
     this.buildDesktopIcons();
     this.buildTaskbar();
     this.buildStartMenu();
     this.wireGlobalEvents();
 
-    // ── Multiplayer ─────────────────────────────────────────────────────────────
+    // ── Multiplayer ───────────────────────────────────────────────────────────
     this.connectServer();
 
-    // ── Cleanup ─────────────────────────────────────────────────────────────────
+    // ── Cleanup ───────────────────────────────────────────────────────────────
     this.events.once('shutdown', this.cleanup, this);
-    this.events.once('destroy', this.cleanup, this);
+    this.events.once('destroy',  this.cleanup, this);
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // DESKTOP ICONS
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private buildDesktopIcons() {
     const area = this.div('xp-desktop-icons');
     this.overlay.appendChild(area);
@@ -92,26 +100,23 @@ export class WinXPDesktop extends Scene {
     return d;
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // TASKBAR
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private buildTaskbar() {
     const tb = this.div('xp-taskbar');
     this.overlay.appendChild(tb);
 
-    // Start button
     const startBtn = document.createElement('button');
     startBtn.className = 'xp-start-btn';
     startBtn.innerHTML = `<svg viewBox="0 0 22 22">${Icons.xpFlag}</svg>start`;
     startBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleStartMenu(); });
     tb.appendChild(startBtn);
 
-    // Programs area
     const progs = this.div('xp-programs');
     progs.id = 'xp-programs';
     tb.appendChild(progs);
 
-    // Tray + clock
     const tray = this.div('xp-tray');
     const clk = this.div('xp-clock');
     clk.id = 'xp-clock';
@@ -131,9 +136,9 @@ export class WinXPDesktop extends Scene {
     el.textContent = `${h}:${m} ${d.getHours() >= 12 ? 'PM' : 'AM'}`;
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // START MENU
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private buildStartMenu() {
     const initial = (this.userName[0] || 'U').toUpperCase();
     const sm = this.div('xp-start-menu');
@@ -141,7 +146,7 @@ export class WinXPDesktop extends Scene {
     sm.innerHTML = `
       <div class="xp-sm-header">
         <div class="xp-sm-avatar">${initial}</div>
-        <div class="xp-sm-username">${this.escHtml(this.userName)}</div>
+        <div class="xp-sm-username">${this.esc(this.userName)}</div>
       </div>
       <div class="xp-sm-body">
         <div class="xp-sm-left">
@@ -190,21 +195,17 @@ export class WinXPDesktop extends Scene {
   }
 
   private toggleStartMenu() {
-    const sm = document.getElementById('xp-start-menu');
-    sm?.classList.toggle('open');
+    document.getElementById('xp-start-menu')?.classList.toggle('open');
   }
-
   private closeStartMenu() {
     document.getElementById('xp-start-menu')?.classList.remove('open');
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // FILE EXPLORER WINDOW
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   openExplorer(startId: string) {
     const winId = 'exp-' + startId;
-
-    // Focus existing window
     if (this.wins.has(winId)) {
       const ws = this.wins.get(winId)!;
       if (ws.minimized) this.restoreWin(winId);
@@ -217,11 +218,15 @@ export class WinXPDesktop extends Scene {
     const win = this.buildWindow(winId, title);
     this.overlay.appendChild(win);
     this.positionWin(win);
-    this.wins.set(winId, { el: win, titlebar: win.querySelector<HTMLElement>('.xp-titlebar')!, minimized: false, maximized: false });
+    this.wins.set(winId, {
+      el: win,
+      titlebar: win.querySelector<HTMLElement>('.xp-titlebar')!,
+      minimized: false,
+      maximized: false,
+    });
     this.makeDraggable(winId);
     this.bringFront(winId);
 
-    // Attach FileExplorer
     const explorer = new FileExplorer(
       this.fs,
       win.querySelector<HTMLElement>('#cnt-' + winId)!,
@@ -231,29 +236,25 @@ export class WinXPDesktop extends Scene {
       win.querySelector<HTMLButtonElement>('#fwd-' + winId)!,
       win.querySelector<HTMLButtonElement>('#up-' + winId)!,
       win.querySelector<HTMLElement>('.xp-win-title')!,
-      startId
+      startId,
     );
     this.explorers.set(winId, explorer);
 
-    // Sidebar links
     const sb = (id: string) => explorer.navigate(id);
     win.querySelector('#sb-comp')!.addEventListener('click', () => sb('root'));
     win.querySelector('#sb-docs')!.addEventListener('click', () => sb('mydocs'));
     win.querySelector('#sb-pics')!.addEventListener('click', () => sb('mypics'));
-    win.querySelector('#sb-dsk')!.addEventListener('click', () => sb('desktop_'));
-
-    // New folder button
+    win.querySelector('#sb-dsk')!.addEventListener('click',  () => sb('desktop_'));
     win.querySelector('#new-' + winId)!.addEventListener('click', () => explorer.newFolder());
 
-    // Taskbar button
     const tbBtn = this.makeTbBtn(winId, title, Icons.mycomputer);
     document.getElementById('xp-programs')?.appendChild(tbBtn);
     this.tbBtns.set(winId, tbBtn);
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // WINDOW BUILDER
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private buildWindow(winId: string, title: string): HTMLElement {
     const win = this.div('xp-window');
     win.id = 'win-' + winId;
@@ -261,7 +262,7 @@ export class WinXPDesktop extends Scene {
     win.innerHTML = `
       <div class="xp-titlebar">
         <svg class="xp-win-icon" viewBox="0 0 48 48">${Icons.mycomputer}</svg>
-        <span class="xp-win-title">${this.escHtml(title)}</span>
+        <span class="xp-win-title">${this.esc(title)}</span>
         <div class="xp-win-btns">
           <button class="xp-wbtn" id="min-${winId}" title="Minimize">─</button>
           <button class="xp-wbtn" id="max-${winId}" title="Maximize">☐</button>
@@ -277,17 +278,17 @@ export class WinXPDesktop extends Scene {
         <span class="xp-mitem">Help</span>
       </div>
       <div class="xp-toolbar">
-        <button class="xp-nav" id="back-${winId}" disabled title="Back">
+        <button class="xp-nav" id="back-${winId}" disabled>
           <svg viewBox="0 0 16 16">${Icons.arrowBack}</svg>&nbsp;Back
         </button>
-        <button class="xp-nav" id="fwd-${winId}" disabled title="Forward">
+        <button class="xp-nav" id="fwd-${winId}" disabled>
           <svg viewBox="0 0 16 16">${Icons.arrowFwd}</svg>
         </button>
-        <button class="xp-nav" id="up-${winId}" title="Up">
+        <button class="xp-nav" id="up-${winId}">
           <svg viewBox="0 0 16 16">${Icons.arrowUp}</svg>&nbsp;Up
         </button>
         <span class="xp-toolbar-sep"></span>
-        <button class="xp-nav" id="new-${winId}" title="New Folder">
+        <button class="xp-nav" id="new-${winId}">
           <svg viewBox="0 0 16 16">${Icons.newFolderIcon}</svg>&nbsp;New Folder
         </button>
       </div>
@@ -299,25 +300,15 @@ export class WinXPDesktop extends Scene {
         <div class="xp-sidebar">
           <div class="xp-sb-sec">
             <div class="xp-sb-title">Other Places</div>
-            <div class="xp-sb-link" id="sb-comp">
-              <svg viewBox="0 0 48 48">${Icons.mycomputer}</svg> My Computer
-            </div>
-            <div class="xp-sb-link" id="sb-docs">
-              <svg viewBox="0 0 48 48">${Icons.folderOpen}</svg> My Documents
-            </div>
-            <div class="xp-sb-link" id="sb-pics">
-              <svg viewBox="0 0 48 48">${Icons.folderOpen}</svg> My Pictures
-            </div>
-            <div class="xp-sb-link" id="sb-dsk">
-              <svg viewBox="0 0 48 48">${Icons.folderOpen}</svg> Desktop
-            </div>
+            <div class="xp-sb-link" id="sb-comp"><svg viewBox="0 0 48 48">${Icons.mycomputer}</svg> My Computer</div>
+            <div class="xp-sb-link" id="sb-docs"><svg viewBox="0 0 48 48">${Icons.folderOpen}</svg> My Documents</div>
+            <div class="xp-sb-link" id="sb-pics"><svg viewBox="0 0 48 48">${Icons.folderOpen}</svg> My Pictures</div>
+            <div class="xp-sb-link" id="sb-dsk"><svg viewBox="0 0 48 48">${Icons.folderOpen}</svg> Desktop</div>
           </div>
         </div>
         <div class="xp-content" id="cnt-${winId}"></div>
       </div>
-      <div class="xp-statusbar">
-        <span class="xp-sb-part" id="sts-${winId}">0 objects</span>
-      </div>
+      <div class="xp-statusbar"><span class="xp-sb-part" id="sts-${winId}">0 objects</span></div>
     `;
 
     win.querySelector('#min-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.minimizeWin(winId); });
@@ -327,20 +318,18 @@ export class WinXPDesktop extends Scene {
     return win;
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // WINDOW MANAGEMENT
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private positionWin(win: HTMLElement) {
-    const isMobile = window.innerWidth < 768;
-    if (isMobile) {
-      win.style.cssText += 'left:0;top:0;width:100%;height:calc(100% - var(--xp-taskbar-h));';
-      return;
-    }
-    const W = this.overlay.clientWidth, H = this.overlay.clientHeight;
-    const ww = Math.min(820, W - 30), wh = Math.min(560, H - 80);
-    const off = this.wins.size * 24;
-    win.style.left = Math.min(70 + off, W - ww - 10) + 'px';
-    win.style.top  = Math.min(20 + off, H - wh - 50) + 'px';
+    if (this.isMobile || window.innerWidth < 768) return; // CSS handles mobile
+    const W = window.innerWidth, H = window.innerHeight;
+    const tbH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--xp-taskbar-h')) || 40;
+    const ww = Math.min(840, W - 30);
+    const wh = Math.min(580, H - tbH - 20);
+    const off = (this.wins.size) * 28;
+    win.style.left = Math.min(60 + off, W - ww - 10) + 'px';
+    win.style.top  = Math.min(16 + off, H - wh - tbH - 10) + 'px';
     win.style.width  = ww + 'px';
     win.style.height = wh + 'px';
   }
@@ -353,13 +342,15 @@ export class WinXPDesktop extends Scene {
     tb.addEventListener('pointerdown', e => {
       if ((e.target as HTMLElement).closest('.xp-wbtn')) return;
       if (ws.maximized) return;
-      drag = true; ox = e.clientX - ws.el.offsetLeft; oy = e.clientY - ws.el.offsetTop;
+      drag = true;
+      ox = e.clientX - ws.el.offsetLeft;
+      oy = e.clientY - ws.el.offsetTop;
       tb.setPointerCapture(e.pointerId);
       e.preventDefault();
     });
     tb.addEventListener('pointermove', e => {
       if (!drag) return;
-      const W = this.overlay.clientWidth, H = this.overlay.clientHeight;
+      const W = window.innerWidth, H = window.innerHeight;
       ws.el.style.left = Math.max(0, Math.min(e.clientX - ox, W - ws.el.offsetWidth)) + 'px';
       ws.el.style.top  = Math.max(0, Math.min(e.clientY - oy, H - 40)) + 'px';
     });
@@ -370,7 +361,8 @@ export class WinXPDesktop extends Scene {
   private bringFront(winId: string) {
     const ws = this.wins.get(winId);
     if (ws) ws.el.style.zIndex = String(++this.zTop);
-    this.tbBtns.forEach((btn, id) => btn.classList.toggle('xp-tb-active', id === winId && !this.wins.get(id)?.minimized));
+    this.tbBtns.forEach((btn, id) =>
+      btn.classList.toggle('xp-tb-active', id === winId && !this.wins.get(id)?.minimized));
   }
 
   private minimizeWin(winId: string) {
@@ -393,14 +385,17 @@ export class WinXPDesktop extends Scene {
     const ws = this.wins.get(winId);
     if (!ws) return;
     const tbH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--xp-taskbar-h')) || 40;
+    const safeB = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--xp-safe-bottom')) || 0;
     if (ws.maximized) {
-      if (ws.prev) { Object.assign(ws.el.style, ws.prev); }
+      if (ws.prev) Object.assign(ws.el.style, ws.prev);
       ws.maximized = false;
       ws.titlebar.style.cursor = 'move';
     } else {
       ws.prev = { left: ws.el.style.left, top: ws.el.style.top, width: ws.el.style.width, height: ws.el.style.height };
-      ws.el.style.left = '0'; ws.el.style.top = '0';
-      ws.el.style.width = '100%'; ws.el.style.height = (this.overlay.clientHeight - tbH) + 'px';
+      ws.el.style.left = '0';
+      ws.el.style.top = '0';
+      ws.el.style.width = '100%';
+      ws.el.style.height = (window.innerHeight - tbH - safeB) + 'px';
       ws.maximized = true;
       ws.titlebar.style.cursor = 'default';
     }
@@ -417,7 +412,7 @@ export class WinXPDesktop extends Scene {
   private makeTbBtn(winId: string, label: string, iconSvg: string): HTMLElement {
     const btn = document.createElement('button');
     btn.className = 'xp-tb-btn xp-tb-active';
-    btn.innerHTML = `<svg viewBox="0 0 48 48">${iconSvg}</svg> ${this.escHtml(label)}`;
+    btn.innerHTML = `<svg viewBox="0 0 48 48">${iconSvg}</svg> ${this.esc(label)}`;
     btn.addEventListener('click', () => {
       const ws = this.wins.get(winId);
       if (!ws) return;
@@ -428,36 +423,33 @@ export class WinXPDesktop extends Scene {
     return btn;
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // CONTEXT MENUS
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private showDesktopMenu(x: number, y: number) {
     this.closeCtxMenus();
     const menu = this.div('xp-ctx');
     menu.innerHTML = `
-      <div class="xp-ctx-item" id="ctx-newcomp"><svg viewBox="0 0 48 48">${Icons.mycomputer}</svg>&nbsp;Open My Computer</div>
+      <div class="xp-ctx-item" id="ctx-comp"><svg viewBox="0 0 48 48" width="16" height="16">${Icons.mycomputer}</svg>&nbsp;Open My Computer</div>
       <div class="xp-ctx-sep"></div>
       <div class="xp-ctx-item xp-disabled">Arrange Icons By</div>
       <div class="xp-ctx-item xp-disabled">Refresh</div>
       <div class="xp-ctx-sep"></div>
       <div class="xp-ctx-item" id="ctx-props">Properties</div>
     `;
-    this.positionCtx(menu, x, y);
+    this.posCtx(menu, x, y);
     document.body.appendChild(menu);
-    menu.querySelector('#ctx-newcomp')!.addEventListener('click', () => { this.closeCtxMenus(); this.openExplorer('root'); });
+    menu.querySelector('#ctx-comp')!.addEventListener('click', () => { this.closeCtxMenus(); this.openExplorer('root'); });
     menu.querySelector('#ctx-props')!.addEventListener('click', () => { this.closeCtxMenus(); this.showSystemProps(); });
-
-    setTimeout(() => {
-      document.addEventListener('pointerdown', () => this.closeCtxMenus(), { once: true, capture: true });
-    }, 0);
+    setTimeout(() => document.addEventListener('pointerdown', () => this.closeCtxMenus(), { once: true, capture: true }), 0);
   }
 
-  private positionCtx(menu: HTMLElement, x: number, y: number) {
+  private posCtx(menu: HTMLElement, x: number, y: number) {
     menu.style.left = x + 'px'; menu.style.top = y + 'px';
     requestAnimationFrame(() => {
       const r = menu.getBoundingClientRect();
-      if (r.right > window.innerWidth)  menu.style.left = (x - r.width) + 'px';
-      if (r.bottom > window.innerHeight) menu.style.top = (y - r.height) + 'px';
+      if (r.right  > window.innerWidth)  menu.style.left = (x - r.width) + 'px';
+      if (r.bottom > window.innerHeight) menu.style.top  = (y - r.height) + 'px';
     });
   }
 
@@ -465,12 +457,12 @@ export class WinXPDesktop extends Scene {
     document.querySelectorAll('.xp-ctx').forEach(m => m.remove());
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // DIALOGS
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private showSystemProps() {
-    const overlay = document.createElement('div');
-    overlay.className = 'xp-dialog-overlay';
+    const ov = document.createElement('div');
+    ov.className = 'xp-dialog-overlay';
     const d = document.createElement('div');
     d.className = 'xp-dialog';
     d.innerHTML = `
@@ -481,28 +473,20 @@ export class WinXPDesktop extends Scene {
       <div class="xp-dlg-body">
         <div class="xp-dlg-msg">
           <svg viewBox="0 0 48 48" width="48" height="48">${Icons.mycomputer}</svg>
-          <div>
-            <b>Windows XP</b><br>
-            Professional<br><br>
-            Registered to: <b>${this.escHtml(this.userName)}</b><br>
-            <br>
-            Computer: Windows XP Desktop<br>
-            Discord Activity v1.0
-          </div>
+          <div><b>Windows XP</b><br>Professional<br><br>
+          User: <b>${this.esc(this.userName)}</b><br><br>
+          Discord Activity — Phaser 3 + Colyseus</div>
         </div>
-        <div class="xp-dlg-btns">
-          <button class="xp-dlg-btn">OK</button>
-        </div>
-      </div>
-    `;
-    overlay.appendChild(d);
-    document.body.appendChild(overlay);
-    d.querySelector('.xp-dlg-btn')!.addEventListener('click', () => overlay.remove());
+        <div class="xp-dlg-btns"><button class="xp-dlg-btn">OK</button></div>
+      </div>`;
+    ov.appendChild(d);
+    document.body.appendChild(ov);
+    d.querySelector('.xp-dlg-btn')!.addEventListener('click', () => ov.remove());
   }
 
   private showTurnOffDialog() {
-    const overlay = document.createElement('div');
-    overlay.className = 'xp-dialog-overlay';
+    const ov = document.createElement('div');
+    ov.className = 'xp-dialog-overlay';
     const d = document.createElement('div');
     d.className = 'xp-dialog';
     d.innerHTML = `
@@ -516,129 +500,149 @@ export class WinXPDesktop extends Scene {
           <button class="xp-dlg-btn" id="dlg-cancel">Cancel</button>
           <button class="xp-dlg-btn" id="dlg-restart">Restart</button>
         </div>
-      </div>
-    `;
-    overlay.appendChild(d);
-    document.body.appendChild(overlay);
-    d.querySelector('#dlg-cancel')!.addEventListener('click', () => overlay.remove());
-    d.querySelector('#dlg-restart')!.addEventListener('click', () => { overlay.remove(); location.reload(); });
+      </div>`;
+    ov.appendChild(d);
+    document.body.appendChild(ov);
+    d.querySelector('#dlg-cancel')!.addEventListener('click', () => ov.remove());
+    d.querySelector('#dlg-restart')!.addEventListener('click', () => { ov.remove(); location.reload(); });
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // GLOBAL EVENTS
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private wireGlobalEvents() {
-    // Desktop right-click
+    // Right-click on desktop
     this.overlay.addEventListener('contextmenu', e => {
-      const tgt = e.target as HTMLElement;
-      if (!tgt.closest('.xp-window') && !tgt.closest('.xp-taskbar')) {
+      const t = e.target as HTMLElement;
+      if (!t.closest('.xp-window') && !t.closest('.xp-taskbar')) {
         e.preventDefault();
         this.showDesktopMenu(e.clientX, e.clientY);
       }
     });
 
-    // Close start menu & ctx when clicking elsewhere
+    // Close start-menu / ctx when clicking elsewhere
     this.overlay.addEventListener('pointerdown', e => {
-      const tgt = e.target as HTMLElement;
-      if (!tgt.closest('.xp-start-menu') && !tgt.closest('.xp-start-btn')) this.closeStartMenu();
-      if (!tgt.closest('.xp-ctx')) this.closeCtxMenus();
-      if (tgt === this.overlay || tgt.classList.contains('xp-desktop-icons'))
+      const t = e.target as HTMLElement;
+      if (!t.closest('.xp-start-menu') && !t.closest('.xp-start-btn')) this.closeStartMenu();
+      if (!t.closest('.xp-ctx')) this.closeCtxMenus();
+      if (t === this.overlay || t.classList.contains('xp-desktop-icons'))
         this.overlay.querySelectorAll('.xp-icon').forEach(ic => ic.classList.remove('selected'));
     }, true);
 
-    // Cursor sharing
-    this.overlay.addEventListener('pointermove', e => {
+    // ── Mouse cursor sharing ──────────────────────────────────────────────
+    document.addEventListener('pointermove', e => {
+      // Show mobile touch cursor (own finger)
+      if (e.pointerType === 'touch') {
+        this.touchCursor.style.left = e.clientX + 'px';
+        this.touchCursor.style.top  = e.clientY + 'px';
+        this.touchCursor.classList.add('xp-touch-active');
+        if (this.touchHide) clearTimeout(this.touchHide);
+        this.touchHide = setTimeout(() => this.touchCursor.classList.remove('xp-touch-active'), 600);
+      }
+
+      // Send cursor to server
       if (!this.room) return;
       const now = Date.now();
       if (now - this.lastCurSend < 50) return;
       this.lastCurSend = now;
-      const r = this.overlay.getBoundingClientRect();
       this.room.send('cursor', {
-        x: ((e.clientX - r.left) / r.width) * 100,
-        y: ((e.clientY - r.top)  / r.height) * 100,
+        x: (e.clientX / window.innerWidth)  * 100,
+        y: (e.clientY / window.innerHeight) * 100,
         name: this.userName,
       });
     });
+
+    // Also show touch cursor on touchstart
+    document.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      if (!t) return;
+      this.touchCursor.style.left = t.clientX + 'px';
+      this.touchCursor.style.top  = t.clientY + 'px';
+      this.touchCursor.classList.add('xp-touch-active');
+    }, { passive: true });
+    document.addEventListener('touchend', () => {
+      if (this.touchHide) clearTimeout(this.touchHide);
+      this.touchHide = setTimeout(() => this.touchCursor.classList.remove('xp-touch-active'), 400);
+    }, { passive: true });
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // COLYSEUS MULTIPLAYER
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
+  // MULTIPLAYER
+  // ══════════════════════════════════════════════════════════════════════════
   private async connectServer() {
     try {
       const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       const httpBase = isLocal ? 'http://localhost:3001' : `${location.protocol}//${location.host}/.proxy/api`;
       const wsBase   = isLocal ? 'ws://localhost:3001'   : `wss://${location.host}/.proxy/api`;
 
-      // Manual matchmaking — bridges v0.17 server flat response to v0.16 client nested format
       const resp = await fetch(`${httpBase}/matchmake/joinOrCreate/game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ screenWidth: this.scale.width, screenHeight: this.scale.height }),
       });
       const data = await resp.json() as { name?: string; sessionId: string; roomId: string; processId: string };
-      if (!resp.ok || !data.roomId) throw new Error(`Matchmake failed: ${JSON.stringify(data)}`);
+      if (!resp.ok || !data.roomId) throw new Error(`Matchmake error: ${JSON.stringify(data)}`);
 
-      // Wrap into the nested format colyseus.js v0.16 expects
       const client = new Client(wsBase);
       this.room = await (client as any).consumeSeatReservation({
         sessionId: data.sessionId,
         room: { name: data.name ?? 'game', roomId: data.roomId, processId: data.processId },
       });
-      console.log('[XP] Colyseus connected');
+      console.log('[XP] Colyseus connected ✓');
 
-      this.room.onMessage('cursor', (d: { sessionId: string; x: number; y: number; name: string; color: string }) => {
-        this.renderPlayerCursor(d);
+      this.room!.onMessage('cursor', (d: { sessionId: string; x: number; y: number; name: string; color: string }) => {
+        this.renderPeerCursor(d);
       });
-      this.room.onMessage('playerLeft', (d: { sessionId: string }) => {
+      this.room!.onMessage('playerLeft', (d: { sessionId: string }) => {
         this.pCursors.get(d.sessionId)?.remove();
         this.pCursors.delete(d.sessionId);
       });
     } catch (err) {
-      console.warn('[XP] Server unavailable:', err);
+      console.warn('[XP] Multiplayer unavailable:', err);
     }
   }
 
-  private renderPlayerCursor(d: { sessionId: string; x: number; y: number; name: string; color: string }) {
+  private renderPeerCursor(d: { sessionId: string; x: number; y: number; name: string; color: string }) {
     let el = this.pCursors.get(d.sessionId);
     if (!el) {
-      el = this.div('xp-cursor');
+      el = document.createElement('div');
+      el.className = 'xp-cursor';
       el.innerHTML = `
         <svg viewBox="0 0 20 28">
           <path d="M1 1 L1 21 L5 14 L10 25 L13 23 L8 12 L15 12 Z"
-            fill="${d.color}" stroke="#000" stroke-width="1.3" stroke-linejoin="round"/>
+            fill="${d.color}" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/>
         </svg>
-        <span class="xp-cursor-name">${this.escHtml(d.name || 'Player')}</span>
-      `;
-      this.overlay.appendChild(el);
+        <span class="xp-cursor-name">${this.esc(d.name || 'Player')}</span>`;
+      document.body.appendChild(el);
       this.pCursors.set(d.sessionId, el);
     }
-    const W = this.overlay.clientWidth, H = this.overlay.clientHeight;
-    el.style.left = (d.x / 100 * W) + 'px';
-    el.style.top  = (d.y / 100 * H) + 'px';
+    el.style.left = (d.x / 100 * window.innerWidth)  + 'px';
+    el.style.top  = (d.y / 100 * window.innerHeight) + 'px';
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // UTILS
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private div(cls: string): HTMLDivElement {
     const el = document.createElement('div');
     el.className = cls;
     return el;
   }
 
-  private escHtml(s: string): string {
+  private esc(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   // CLEANUP
-  // ════════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════
   private cleanup() {
     if (this.clockTick) clearInterval(this.clockTick);
+    if (this.touchHide) clearTimeout(this.touchHide);
     this.pCursors.forEach(el => el.remove());
     this.pCursors.clear();
     this.overlay?.remove();
+    this.touchCursor?.remove();
     try { this.room?.leave(); } catch { /* ignore */ }
     this.room = null;
   }
