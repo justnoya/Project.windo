@@ -3,6 +3,7 @@ import { Room, Client } from "colyseus.js";
 import { getUserName } from "../utils/discordSDK";
 import { gameState } from "../utils/gameState";
 import { SoundManager } from "../utils/SoundManager";
+import { resolveEndpoints } from "../utils/serverConnect";
 import { VirtualFileSystem } from "../fileSystem";
 import { FileExplorer } from "../FileExplorer";
 import * as Icons from "../XPIcons";
@@ -1536,18 +1537,8 @@ export class WinXPDesktop extends Scene {
 
   private async connectServer() {
     try {
-      const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-
-      let httpBase: string;
-      let wsBase: string;
-
-      if (isLocal) {
-        httpBase = 'http://localhost:3001';
-        wsBase   = 'ws://localhost:3001';
-      } else {
-        httpBase = `${location.protocol}//${location.host}/.proxy/api`;
-        wsBase   = `wss://${location.host}/.proxy/api`;
-      }
+      const { httpBase, wsBase, label } = await resolveEndpoints();
+      console.log(`[XP] Connecting to Colyseus at: ${httpBase} (${label})`);
 
       const resp = await fetch(`${httpBase}/matchmake/joinOrCreate/game`, {
         method: 'POST',

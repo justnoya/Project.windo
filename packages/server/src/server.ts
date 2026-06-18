@@ -24,8 +24,6 @@ const server = new Server({
 // Game Rooms
 server
   .define("game", GameRoom)
-  // filterBy allows us to call joinOrCreate and then hold one game per channel
-  // https://discuss.colyseus.io/topic/345/is-it-possible-to-run-joinorcreatebyid/3
   .filterBy(["channelId"]);
 
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -44,9 +42,39 @@ if (process.env.NODE_ENV === "production") {
   app.use(express.static(clientBuildPath));
 }
 
-// Health check endpoint
+// Health check
 router.get("/health", (_req: Request, res: Response) => {
   res.json({ ok: true });
+});
+
+// Runtime config — client fetches this to discover which Colyseus URL to use.
+// Set EXTERNAL_SERVER_URL (non-VITE so it is never baked into the client bundle)
+// to point at GoatPanel or any external Colyseus server.
+// If unset or unreachable the client falls back to the local proxy.
+router.get("/config", async (_req: Request, res: Response) => {
+  const external = process.env.EXTERNAL_SERVER_URL?.replace(/\/$/, "");
+
+  if (external) {
+    try {
+      const probe = await fetch(`${external}/health`, {
+        signal: AbortSignal.timeout(3500),
+      });
+      if (probe.ok) {
+        const data = (await probe.json()) as { ok?: boolean };
+        if (data.ok) {
+          console.log(`[config] External server reachable: ${external}`);
+          res.json({ colyseusUrl: external, usingExternal: true, label: external });
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn(`[config] External server unreachable (${external}):`, (err as Error).message);
+    }
+  }
+
+  // Fall back: tell client to use the local proxy (null = use /.proxy/api)
+  console.log("[config] Using local Colyseus server");
+  res.json({ colyseusUrl: null, usingExternal: false, label: "local" });
 });
 
 // If you don't want people accessing your server stats, comment this line.
@@ -79,4 +107,7 @@ app.use(process.env.NODE_ENV === "production" ? "/.proxy/api" : "/", router);
 
 server.listen(port).then(() => {
   console.log(`App is listening on port ${port} !`);
+  const ext = process.env.EXTERNAL_SERVER_URL;
+  if (ext) console.log(`External server configured: ${ext}`);
+  else console.log("No EXTERNAL_SERVER_URL set — using local Colyseus only");
 });

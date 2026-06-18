@@ -1501,6 +1501,15 @@
 }
 .gm-conn-retry-btn:hover { background: rgba(240,71,71,0.15); }
 .gm-btn:disabled { opacity: 0.45; pointer-events: none; }
+.gm-conn-tag {
+  display: inline-block; background: rgba(88,101,242,0.2);
+  border: 1px solid rgba(88,101,242,0.5); color: #7289da;
+  font-size: 6px; padding: 1px 5px; border-radius: 2px;
+  letter-spacing: 0.05em; margin-left: 4px; vertical-align: middle;
+}
+.gm-conn-tag-local {
+  background: rgba(67,181,129,0.15); border-color: rgba(67,181,129,0.4); color: #43b581;
+}
 
 /* ════════════════════════════════════════
    MULTIPLAYER LOBBY

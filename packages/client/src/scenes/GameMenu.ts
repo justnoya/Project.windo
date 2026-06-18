@@ -93,10 +93,14 @@ export class GameMenu extends Scene {
     this.setMultiBtn(true);
     this.setStatus(`<span class="gm-conn-checking">⟳ Checking server connection…</span>`);
 
-    const ok = await checkServerHealth();
+    const { ok, label } = await checkServerHealth();
 
     if (ok) {
-      this.setStatus(`<span class="gm-conn-ok">✔ Server reachable — connecting…</span>`);
+      const isExternal = !label.includes('proxy') && !label.includes('local');
+      const serverTag = isExternal
+        ? `<span class="gm-conn-tag">GoatPanel</span>`
+        : `<span class="gm-conn-tag gm-conn-tag-local">Local</span>`;
+      this.setStatus(`<span class="gm-conn-ok">✔ Connected ${serverTag}</span>`);
       this.time.delayedCall(600, () => {
         gameState.mode = 'multi';
         this.transition('MultiplayerLobby');
