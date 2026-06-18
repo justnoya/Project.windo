@@ -2,6 +2,8 @@ import { CommandResponse, DiscordSDK, DiscordSDKMock } from "@discord/embedded-a
 type Auth = CommandResponse<"authenticate">;
 let auth: Auth;
 
+const presenceStartTimestamp = Date.now();
+
 const queryParams = new URLSearchParams(window.location.search);
 const isEmbedded = queryParams.get("frame_id") != null;
 
@@ -61,7 +63,7 @@ const authorizeDiscordUser = async () => {
     response_type: "code",
     state: "",
     prompt: "none",
-    scope: ["identify", "applications.commands"],
+    scope: ["identify", "applications.commands", "rpc.activities.write"],
   });
 
   // Retrieve an access_token from your application's server
@@ -133,4 +135,40 @@ const getUserId = () => {
   return auth.user.id;
 };
 
-export { discordSdk, initiateDiscordSDK, authorizeDiscordUser, getUserName, setDisplayName, getUserAvatar, getUserId, getIsEmbedded };
+export type PresenceState = "menu" | "lobby" | "playing";
+
+const updatePresence = async (
+  presenceState: PresenceState,
+  options: { partySize?: number; partyMax?: number } = {}
+) => {
+  if (!isEmbedded) return;
+
+  const { partySize = 1, partyMax = 4 } = options;
+  const channelId = (discordSdk as DiscordSDK).channelId ?? "unknown";
+
+  const configs: Record<PresenceState, { details: string; state: string }> = {
+    menu:    { details: "Windows XP Activity", state: "In the Main Menu" },
+    lobby:   { details: "Windows XP Activity", state: `In Lobby · ${partySize}/${partyMax} Players` },
+    playing: { details: "Windows XP Activity", state: `Playing · ${partySize}/${partyMax} Players` },
+  };
+
+  const { details, state } = configs[presenceState];
+
+  try {
+    await (discordSdk as DiscordSDK).commands.setActivity({
+      activity: {
+        type: 0,
+        details,
+        state,
+        timestamps: { start: presenceStartTimestamp },
+        ...(presenceState !== "menu"
+          ? { party: { id: channelId, size: [partySize, partyMax] } }
+          : {}),
+      },
+    });
+  } catch (e) {
+    console.warn("[Rich Presence] setActivity failed:", e);
+  }
+};
+
+export { discordSdk, initiateDiscordSDK, authorizeDiscordUser, getUserName, setDisplayName, getUserAvatar, getUserId, getIsEmbedded, updatePresence };

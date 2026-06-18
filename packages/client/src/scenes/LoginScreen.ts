@@ -1,5 +1,5 @@
 import { Scene } from "phaser";
-import { authorizeDiscordUser, getUserName, getUserAvatar, setDisplayName, getIsEmbedded } from "../utils/discordSDK";
+import { authorizeDiscordUser, getUserName, getUserAvatar, setDisplayName, getIsEmbedded, updatePresence } from "../utils/discordSDK";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { SoundManager } from "../utils/SoundManager";
 
@@ -170,6 +170,7 @@ export class LoginScreen extends Scene {
   }
 
   private transitionToGameMenu() {
+    updatePresence("menu");
     this.overlay.style.transition = "opacity 0.5s";
     this.overlay.style.opacity = "0";
     this.time.delayedCall(500, () => {

@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import { SoundManager } from '../utils/SoundManager';
 import { gameState } from '../utils/gameState';
-import { getUserName } from '../utils/discordSDK';
+import { getUserName, updatePresence } from '../utils/discordSDK';
 import { joinGameRoom } from '../utils/serverConnect';
 import { Room } from 'colyseus.js';
 
@@ -112,16 +112,19 @@ export class MultiplayerLobby extends Scene {
         if (this.otherPlayers.size < 3) {
           this.otherPlayers.set(d.sessionId, { name: d.name, color: d.color });
           this.renderLobby();
+          updatePresence("lobby", { partySize: this.totalPlayers, partyMax: 4 });
         }
       });
 
       room.onMessage('playerLeft', (d: { sessionId: string }) => {
         this.otherPlayers.delete(d.sessionId);
         this.renderLobby();
+        updatePresence("lobby", { partySize: this.totalPlayers, partyMax: 4 });
       });
 
       room.send('presence', { name: this.myName });
       this.renderLobby();
+      updatePresence("lobby", { partySize: this.totalPlayers, partyMax: 4 });
 
     } catch (err) {
       console.warn('[Lobby] Connection failed:', err);
@@ -131,6 +134,7 @@ export class MultiplayerLobby extends Scene {
   }
 
   private startGame() {
+    updatePresence("playing", { partySize: this.totalPlayers, partyMax: 4 });
     const bg = this.overlay.querySelector('.lobby-bg') as HTMLElement | null;
     if (bg) { bg.style.transition = 'opacity 0.4s'; bg.style.opacity = '0'; }
     this.time.delayedCall(400, () => {
