@@ -18,6 +18,7 @@
     }
   ],
   "env": {
-    "VITE_CLIENT_ID": "1516867540264161472"
+    "VITE_CLIENT_ID": "1516867540264161472",
+    "VITE_SERVER_URL": "http://goatpanel.duckdns.org:3002"
   }
 }
