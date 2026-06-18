@@ -207,6 +207,46 @@ class SoundManagerClass {
     this.osc(ctx, out, 'square', 0, 180, 180, 0.15, 0.001, 0.25, 0.01);
     this.osc(ctx, out, 'square', 0, 120, 120, 0.22, 0.001, 0.25, 0.35);
   }
+
+  hover() {
+    const s = this.get(0.05); if (!s) return;
+    const { ctx, out } = s;
+    this.osc(ctx, out, 'sine', 0, 800, 700, 0.12, 0.001, 0.035);
+  }
+
+  wypPick() {
+    const s = this.get(0.2); if (!s) return;
+    const { ctx, out } = s;
+    this.osc(ctx, out, 'sine',     0, 440, 550, 0.3,  0.001, 0.1);
+    this.osc(ctx, out, 'sine',     0, 880, 1100, 0.1, 0.001, 0.08, 0.06);
+    this.noise(ctx, out, 2000, 0.07, 0.001, 0.08, 0.03);
+  }
+
+  wypHint() {
+    const s = this.get(0.15); if (!s) return;
+    const { ctx, out } = s;
+    this.osc(ctx, out, 'triangle', 0, 600, 800, 0.25, 0.001, 0.12);
+    this.osc(ctx, out, 'sine',     0, 1200, 1000, 0.08, 0.001, 0.1, 0.05);
+  }
+
+  wypReveal() {
+    const s = this.get(0.3); if (!s) return;
+    const { ctx, out } = s;
+    this.osc(ctx, out, 'triangle', 0, 330, 660,  0.35, 0.001, 0.35);
+    this.osc(ctx, out, 'sine',     0, 660, 1320, 0.18, 0.001, 0.28, 0.1);
+    this.osc(ctx, out, 'sine',     0, 990, 1980, 0.1,  0.001, 0.22, 0.18);
+    this.noise(ctx, out, 3000, 0.1, 0.001, 0.2, 0.05);
+  }
+
+  wypCorrect() {
+    const s = this.get(0.32); if (!s) return;
+    const { ctx, out } = s;
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((f, i) => {
+      this.osc(ctx, out, 'triangle', 0, f, f,    0.3, 0.001, 0.22, i * 0.11);
+      this.osc(ctx, out, 'sine',     0, f, f * 0.99, 0.1, 0.001, 0.18, i * 0.11 + 0.02);
+    });
+  }
 }
 
 export const SoundManager = new SoundManagerClass();

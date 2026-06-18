@@ -111,6 +111,33 @@ export class GameRoom extends Room {
       this.broadcast('note:delete', { id: data.id });
     });
 
+    // Who You Play — all messages are relayed to the full room
+    this.onMessage('wyp:ready', (client: Client, data: any) => {
+      this.broadcast('wyp:ready', { sessionId: client.sessionId, name: String(data.name || '').slice(0, 32) }, { except: client });
+    });
+    this.onMessage('wyp:hint', (client: Client, data: any) => {
+      this.broadcast('wyp:hint', { sessionId: client.sessionId, hint: String(data.hint || '').slice(0, 200) });
+    });
+    this.onMessage('wyp:guess', (client: Client, data: any) => {
+      this.broadcast('wyp:guess', {
+        from: client.sessionId,
+        fromName: String(data.fromName || '').slice(0, 32),
+        targetId: String(data.targetId || ''),
+        guess: String(data.guess || '').slice(0, 100),
+      });
+    });
+    this.onMessage('wyp:reveal', (client: Client, data: any) => {
+      this.broadcast('wyp:reveal', {
+        sessionId: client.sessionId,
+        character: String(data.character || '').slice(0, 50),
+        emoji: String(data.emoji || '').slice(0, 8),
+        guesserName: String(data.guesserName || '').slice(0, 32),
+      });
+    });
+    this.onMessage('wyp:reset', (client: Client) => {
+      this.broadcast('wyp:reset', { by: client.sessionId });
+    });
+
     // Legacy
     this.onMessage('move', (_client: Client, _message: any) => { /* no-op */ });
   }
