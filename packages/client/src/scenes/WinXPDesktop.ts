@@ -99,11 +99,28 @@ export class WinXPDesktop extends Scene {
     const area = this.div('xp-desktop-icons');
     this.overlay.appendChild(area);
     area.appendChild(this.makeDesktopIcon('My Computer', Icons.mycomputer, () => this.openExplorer('root')));
+    area.appendChild(this.makeDesktopIconImg('Miscord', '/miscord-icon.png', () => this.openMiscord()));
   }
 
   private makeDesktopIcon(label: string, svg: string, onOpen: () => void): HTMLElement {
     const d = this.div('xp-icon');
     d.innerHTML = `<svg viewBox="0 0 48 48">${svg}</svg><span class="xp-icon-label">${label}</span>`;
+    let lastTap = 0;
+    d.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      const now = Date.now();
+      this.overlay.querySelectorAll('.xp-icon').forEach(el => el.classList.remove('selected'));
+      d.classList.add('selected');
+      if (now - lastTap < 420) { SoundManager.dblClick(); onOpen(); }
+      else SoundManager.click();
+      lastTap = now;
+    });
+    return d;
+  }
+
+  private makeDesktopIconImg(label: string, imgSrc: string, onOpen: () => void): HTMLElement {
+    const d = this.div('xp-icon');
+    d.innerHTML = `<img src="${imgSrc}" class="xp-icon-img" alt="${label}" /><span class="xp-icon-label">${label}</span>`;
     let lastTap = 0;
     d.addEventListener('pointerdown', e => {
       e.stopPropagation();
@@ -221,6 +238,165 @@ export class WinXPDesktop extends Scene {
   }
   private closeStartMenu() {
     document.getElementById('xp-start-menu')?.classList.remove('open');
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // MISCORD WINDOW
+  // ══════════════════════════════════════════════════════════════════════════
+  private openMiscord() {
+    const winId = 'miscord';
+    if (this.wins.has(winId)) {
+      const ws = this.wins.get(winId)!;
+      if (ws.minimized) this.restoreWin(winId);
+      else this.bringFront(winId);
+      return;
+    }
+    SoundManager.windowOpen();
+
+    const win = document.createElement('div');
+    win.className = 'xp-window miscord-window';
+    win.id = 'win-' + winId;
+    win.style.zIndex = String(++this.zTop);
+
+    const SEED_MESSAGES = [
+      { author: 'clyde_ghost', avatar: '👻', text: 'is anyone else seeing this or just me', ts: '9:42 AM' },
+      { author: 'xX_n00bslayer_Xx', avatar: '💀', text: 'yeah the app keeps crashing lmaooo', ts: '9:43 AM' },
+      { author: 'totallynotabot', avatar: '🤖', text: 'ERROR: connection_refused — retrying in 3s…', ts: '9:43 AM' },
+      { author: 'clyde_ghost', avatar: '👻', text: 'bro who let the bot in here', ts: '9:44 AM' },
+      { author: 'vaporwave99', avatar: '🌊', text: 'miscord my beloved 💜', ts: '9:45 AM' },
+    ];
+
+    const seedHtml = SEED_MESSAGES.map(m => `
+      <div class="mc-msg">
+        <div class="mc-avatar">${m.avatar}</div>
+        <div class="mc-msg-content">
+          <span class="mc-author">${m.author}</span>
+          <span class="mc-ts">${m.ts}</span>
+          <div class="mc-text">${m.text}</div>
+        </div>
+      </div>`).join('');
+
+    win.innerHTML = `
+      <div class="xp-titlebar miscord-titlebar">
+        <img src="/miscord-icon.png" class="xp-win-icon-img" alt="Miscord" />
+        <span class="xp-win-title">Miscord</span>
+        <div class="xp-win-btns">
+          <button class="xp-wbtn" id="min-${winId}" title="Minimize">─</button>
+          <button class="xp-wbtn" id="max-${winId}" title="Maximize">☐</button>
+          <button class="xp-wbtn xp-close" id="cls-${winId}" title="Close">✕</button>
+        </div>
+      </div>
+      <div class="mc-body">
+        <div class="mc-server-rail">
+          <div class="mc-server-icon mc-server-home" title="Home">
+            <img src="/miscord-icon.png" alt="Miscord" />
+          </div>
+          <div class="mc-server-sep"></div>
+          <div class="mc-server-icon" title="General">💬</div>
+          <div class="mc-server-icon" title="Gaming">🎮</div>
+          <div class="mc-server-icon" title="Memes">💀</div>
+          <div class="mc-server-icon" title="Music">🎵</div>
+        </div>
+        <div class="mc-sidebar">
+          <div class="mc-guild-header">
+            <span>Miscord HQ</span>
+            <span class="mc-guild-chevron">▾</span>
+          </div>
+          <div class="mc-channel-section">TEXT CHANNELS</div>
+          <div class="mc-channel mc-channel-active">
+            <span class="mc-channel-hash">#</span> general
+          </div>
+          <div class="mc-channel">
+            <span class="mc-channel-hash">#</span> off-topic
+          </div>
+          <div class="mc-channel">
+            <span class="mc-channel-hash">#</span> bug-reports
+          </div>
+          <div class="mc-channel">
+            <span class="mc-channel-hash">#</span> memes
+          </div>
+          <div class="mc-channel-section">VOICE CHANNELS</div>
+          <div class="mc-channel mc-channel-voice">
+            <span class="mc-channel-hash">🔊</span> General
+          </div>
+          <div class="mc-channel mc-channel-voice">
+            <span class="mc-channel-hash">🔊</span> AFK
+          </div>
+          <div class="mc-user-panel">
+            <div class="mc-user-avatar">🤕</div>
+            <div class="mc-user-info">
+              <div class="mc-user-name">${this.esc(this.userName)}</div>
+              <div class="mc-user-status">Online</div>
+            </div>
+            <div class="mc-user-icons">🎤 🎧 ⚙</div>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-channel-header">
+            <span class="mc-channel-hash-big">#</span>
+            <span class="mc-channel-name-big">general</span>
+            <span class="mc-channel-topic">Welcome to Miscord. Things may be slightly broken.</span>
+          </div>
+          <div class="mc-messages" id="mc-messages-${winId}">${seedHtml}</div>
+          <div class="mc-input-area">
+            <input class="mc-input" id="mc-input-${winId}" type="text" placeholder="Message #general" maxlength="200" />
+            <button class="mc-send-btn" id="mc-send-${winId}" title="Send">➤</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.overlay.appendChild(win);
+    this.positionWin(win);
+    this.wins.set(winId, {
+      el: win,
+      titlebar: win.querySelector<HTMLElement>('.xp-titlebar')!,
+      minimized: false,
+      maximized: false,
+    });
+    this.makeDraggable(winId);
+    this.bringFront(winId);
+
+    win.querySelector('#min-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.minimizeWin(winId); });
+    win.querySelector('#max-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.toggleMax(winId); });
+    win.querySelector('#cls-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.closeWin(winId); });
+    win.addEventListener('pointerdown', () => this.bringFront(winId));
+
+    const input = win.querySelector<HTMLInputElement>('#mc-input-' + winId)!;
+    const sendBtn = win.querySelector<HTMLButtonElement>('#mc-send-' + winId)!;
+    const msgArea = win.querySelector<HTMLElement>('#mc-messages-' + winId)!;
+
+    const sendMessage = () => {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      const now = new Date();
+      const h = now.getHours() % 12 || 12;
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const ts = `${h}:${m} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
+      const msg = document.createElement('div');
+      msg.className = 'mc-msg mc-msg-own';
+      msg.innerHTML = `
+        <div class="mc-avatar">😊</div>
+        <div class="mc-msg-content">
+          <span class="mc-author mc-author-own">${this.esc(this.userName)}</span>
+          <span class="mc-ts">${ts}</span>
+          <div class="mc-text">${this.esc(text)}</div>
+        </div>`;
+      msgArea.appendChild(msg);
+      msgArea.scrollTop = msgArea.scrollHeight;
+      SoundManager.click();
+    };
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+    const tbBtn = this.makeTbBtn(winId, 'Miscord', Icons.mycomputer);
+    tbBtn.innerHTML = `<img src="/miscord-icon.png" style="width:16px;height:16px;object-fit:contain;" /> Miscord`;
+    document.getElementById('xp-programs')?.appendChild(tbBtn);
+    this.tbBtns.set(winId, tbBtn);
+
+    setTimeout(() => { msgArea.scrollTop = msgArea.scrollHeight; }, 50);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
