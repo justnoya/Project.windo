@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
 
 export default ({ mode }: { mode: string }) => {
+  const replitDomain = process.env.REPLIT_DEV_DOMAIN;
+
   return defineConfig({
     envDir: "../../",
     build: {
@@ -31,9 +33,9 @@ export default ({ mode }: { mode: string }) => {
           rewrite: (path) => path.replace(/^\/.proxy\/api/, ""),
         },
       },
-      hmr: {
-        clientPort: 443,
-      },
+      hmr: replitDomain
+        ? { host: replitDomain, clientPort: 443, protocol: "wss" }
+        : { clientPort: 443 },
     },
   });
 };
