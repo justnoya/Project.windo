@@ -8,11 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 .
 node_modules
+dist
 dist-ssr
 *.local
-
-# Keep server dist out of ignore so Pterodactyl doesn't need to rebuild
-packages/client/dist
 
 # Editor directories and files
 .vscode/*

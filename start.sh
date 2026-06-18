@@ -7,14 +7,19 @@ echo "  Windows XP Activity — Pterodactyl Boot"
 echo "========================================="
 echo ""
 
-# ── Install production dependencies only ─────
-echo "[1/2] Installing server dependencies..."
+# ── Install all dependencies (including devDeps for tsc) ─────
+echo "[1/3] Installing server dependencies..."
 cd packages/server
-npm install --omit=dev --no-audit --no-fund --registry=https://registry.npmjs.org
+npm install --no-audit --no-fund --ignore-scripts --registry=https://registry.npmjs.org
+echo "      Done."
+
+# ── Build TypeScript ──────────────────────────────────────────
+echo "[2/3] Building server..."
+npx tsc
 echo "      Done."
 cd ../..
 
-# ── Start ─────────────────────────────────────
-echo "[2/2] Starting server on port ${PORT:-3000}..."
+# ── Start ─────────────────────────────────────────────────────
+echo "[3/3] Starting server on port ${PORT:-3000}..."
 echo ""
 NODE_ENV=production PORT=${PORT:-3000} node packages/server/dist/server.js
