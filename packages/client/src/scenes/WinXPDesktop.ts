@@ -150,7 +150,7 @@ export class WinXPDesktop extends Scene {
 
   private makeDesktopIconImg(label: string, imgSrc: string, onOpen: () => void): HTMLElement {
     const d = this.div('xp-icon');
-    d.innerHTML = `<img src="${imgSrc}" class="xp-icon-img" alt="${label}" /><span class="xp-icon-label">${label}</span>`;
+    d.innerHTML = `<img src="${imgSrc}" class="xp-icon-img" alt="${label}" width="48" height="48" loading="eager" decoding="sync" /><span class="xp-icon-label">${label}</span>`;
     let lastTap = 0;
     d.addEventListener('pointerdown', e => {
       e.stopPropagation();
@@ -324,9 +324,12 @@ export class WinXPDesktop extends Scene {
 
           <!-- No friend selected yet -->
           <div class="mxp-no-chat" id="mxp-no-chat">
-            <img src="/miscord-icon.png" alt="Miscord" />
+            <div class="mxp-no-chat-logo">
+              <img src="/miscord-icon.png" alt="Miscord" width="54" height="54" loading="eager" decoding="sync" />
+            </div>
             <div class="mxp-no-chat-title">Miscord</div>
-            <div class="mxp-no-chat-sub">Select a friend to start chatting</div>
+            <div class="mxp-no-chat-sub">Invite Discord friends to the Activity — they'll appear here as online players</div>
+            <div class="mxp-no-chat-hint">💬 Select a player to open a private chat</div>
           </div>
 
           <!-- Active DM (hidden until friend selected) -->
