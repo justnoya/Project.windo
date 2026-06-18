@@ -1,0 +1,74 @@
+16:16:47.861 Running build in Washington, D.C., USA (East) – iad1
+16:16:47.862 Build machine configuration: 2 cores, 8 GB
+16:16:47.875 Cloning github.com/justnoya/Project.windo (Branch: main, Commit: 7a427b9)
+16:16:47.876 Skipping build cache, deployment was triggered without cache.
+16:16:48.466 Cloning completed: 591.000ms
+16:16:48.771 Running "vercel build"
+16:16:48.791 Vercel CLI 54.14.0
+16:16:49.522 Warning: Detected "engines": { "node": ">=21.0.0" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: https://vercel.link/node-version
+16:16:49.533 Installing dependencies...
+16:16:50.088 npm warn Unknown project config " true }" ({ "engineStrict" : true }). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+16:16:50.743 
+16:16:50.743 > discord-multiplayer-template@1.1 postinstall
+16:16:50.743 > npm run install-client && npm run install-server
+16:16:50.745 
+16:16:50.847 npm warn Unknown env config " true }" ({ "enginestrict" : true }). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+16:16:50.847 npm warn Unknown project config " true }" ({ "engineStrict" : true }). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+16:16:50.862 
+16:16:50.863 > discord-multiplayer-template@1.1 install-client
+16:16:50.863 > cd "./packages/client" && npm install
+16:16:50.863 
+16:16:51.184 npm warn Unknown env config " true }" ({ "enginestrict" : true }). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+16:16:54.869 
+16:16:54.869 added 33 packages, and audited 34 packages in 4s
+16:16:54.870 
+16:16:54.870 6 packages are looking for funding
+16:16:54.870   run `npm fund` for details
+16:16:54.901 
+16:16:54.901 8 vulnerabilities (5 moderate, 3 high)
+16:16:54.902 
+16:16:54.902 To address all issues, run:
+16:16:54.902   npm audit fix
+16:16:54.903 
+16:16:54.903 Run `npm audit` for details.
+16:16:55.032 npm warn Unknown env config " true }" ({ "enginestrict" : true }). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+16:16:55.032 npm warn Unknown project config " true }" ({ "engineStrict" : true }). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+16:16:55.046 
+16:16:55.047 > discord-multiplayer-template@1.1 install-server
+16:16:55.047 > cd "./packages/server" && npm install
+16:16:55.047 
+16:16:55.285 npm warn Unknown env config " true }" ({ "enginestrict" : true }). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+16:16:56.302 npm error code ERESOLVE
+16:16:56.303 npm error ERESOLVE could not resolve
+16:16:56.303 npm error
+16:16:56.304 npm error While resolving: @colyseus/core@0.17.43
+16:16:56.305 npm error Found: @colyseus/schema@3.0.17
+16:16:56.305 npm error node_modules/@colyseus/schema
+16:16:56.305 npm error   @colyseus/schema@"^3.0.0" from the root project
+16:16:56.306 npm error   peer @colyseus/schema@"^3.0.0" from colyseus@0.16.3
+16:16:56.306 npm error   node_modules/colyseus
+16:16:56.306 npm error     colyseus@"^0.16.0" from the root project
+16:16:56.307 npm error
+16:16:56.307 npm error Could not resolve dependency:
+16:16:56.307 npm error peer @colyseus/schema@"^4.0.7" from @colyseus/core@0.17.43
+16:16:56.308 npm error node_modules/@colyseus/core
+16:16:56.308 npm error   @colyseus/core@"^0.17.43" from the root project
+16:16:56.308 npm error
+16:16:56.308 npm error Conflicting peer dependency: @colyseus/schema@4.0.26
+16:16:56.308 npm error node_modules/@colyseus/schema
+16:16:56.309 npm error   peer @colyseus/schema@"^4.0.7" from @colyseus/core@0.17.43
+16:16:56.309 npm error   node_modules/@colyseus/core
+16:16:56.309 npm error     @colyseus/core@"^0.17.43" from the root project
+16:16:56.309 npm error
+16:16:56.310 npm error Fix the upstream dependency conflict, or retry this command with --force or --legacy-peer-deps to accept an incorrect (and potentially broken) dependency resolution.
+16:16:56.310 npm error
+16:16:56.310 npm error
+16:16:56.310 npm error For a full report see:
+16:16:56.310 npm error /vercel/.npm/_logs/2026-06-18T10_46_55_106Z-eresolve-report.txt
+16:16:56.311 npm error A complete log of this run can be found in: /vercel/.npm/_logs/2026-06-18T10_46_55_106Z-debug-0.log
+16:16:56.327 npm error code 1
+16:16:56.327 npm error path /vercel/path0
+16:16:56.328 npm error command failed
+16:16:56.328 npm error command sh -c npm run install-client && npm run install-server
+16:16:56.329 npm error A complete log of this run can be found in: /vercel/.npm/_logs/2026-06-18T10_46_49_680Z-debug-0.log
+16:16:56.361 Error: Command "npm install" exited with 1
