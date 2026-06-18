@@ -7,29 +7,14 @@ echo "  Windows XP Activity — Pterodactyl Boot"
 echo "========================================="
 echo ""
 
-# ── Install server deps ──────────────────────
-echo "[1/4] Installing server dependencies..."
+# ── Install production dependencies only ─────
+echo "[1/2] Installing server dependencies..."
 cd packages/server
-npm install --no-audit --no-fund
+npm install --omit=dev --no-audit --no-fund
 echo "      Done."
 cd ../..
 
-# ── Build server ─────────────────────────────
-echo "[2/4] Building server (TypeScript)..."
-cd packages/server
-npm run build
-echo "      Done."
-cd ../..
-
-# ── Build client ─────────────────────────────
-echo "[3/4] Building client (Vite)..."
-cd packages/client
-npm install --no-audit --no-fund
-npm run build
-echo "      Done."
-cd ../..
-
-# ── Start ────────────────────────────────────
-echo "[4/4] Starting server on port ${PORT:-3000}..."
+# ── Start ─────────────────────────────────────
+echo "[2/2] Starting server on port ${PORT:-3000}..."
 echo ""
 NODE_ENV=production PORT=${PORT:-3000} node packages/server/dist/server.js
