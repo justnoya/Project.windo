@@ -8,7 +8,7 @@
     "dev": "pnpm run --filter \"./packages/**\" --parallel dev",
     "postinstall": "npm run install-client && npm run install-server",
     "install-client": "cd \"./packages/client\" && npm install",
-    "install-server": "cd \"./packages/server\" && npm install --legacy-peer-deps",
+    "install-server": "cd \"./packages/server\" && npm install",
     "client-build": "cd \"./packages/client\" && npm run build",
     "tunnel": "npm run client-build && cloudflared tunnel --url http://localhost:3001"
   },
