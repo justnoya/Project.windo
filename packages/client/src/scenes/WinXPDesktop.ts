@@ -43,6 +43,9 @@ export class WinXPDesktop extends Scene {
   private lastCurSend = 0;
   private userName = 'User';
   private isMobile = false;
+  private miscordOnline = new Map<string, { name: string; color: string }>();
+  private miscordActiveFriend: string | null = null;
+  private miscordDmHistory = new Map<string, Array<{ fromName: string; text: string; ts: number; own: boolean; read?: boolean }>>();
 
   constructor() { super('WinXPDesktop'); }
 
@@ -241,7 +244,7 @@ export class WinXPDesktop extends Scene {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // MISCORD WINDOW
+  // MISCORD WINDOW — WinXP Messenger theme, real Colyseus players
   // ══════════════════════════════════════════════════════════════════════════
   private openMiscord() {
     const winId = 'miscord';
@@ -258,35 +261,10 @@ export class WinXPDesktop extends Scene {
     win.id = 'win-' + winId;
     win.style.zIndex = String(++this.zTop);
 
-    const mkAvatar = (bg: string, content: string, isImg = false) =>
-      isImg
-        ? `<div class="mc2-avatar" style="background:${bg};overflow:hidden;padding:0"><img src="${content}" style="width:100%;height:100%;object-fit:cover;" /></div>`
-        : `<div class="mc2-avatar" style="background:${bg}">${content}</div>`;
-
-    const mkMsg = (avatarHtml: string, author: string, authorColor: string, ts: string, body: string, badge = '') => `
-      <div class="mc2-msg">
-        ${avatarHtml}
-        <div class="mc2-msg-right">
-          <div class="mc2-msg-header">
-            <span class="mc2-author" style="color:${authorColor}">${author}</span>
-            ${badge ? `<span class="mc2-badge">${badge}</span>` : ''}
-            <span class="mc2-ts">Today at ${ts}</span>
-          </div>
-          <div class="mc2-msg-body">${body}</div>
-        </div>
-      </div>`;
-
-    const seedMsgs =
-      mkMsg(mkAvatar('#1a3a5c', '<img src="/miscord-icon.png" style="width:100%;height:100%;object-fit:cover;" />'), 'Watch_User', '#b9c0ca', '4:20 PM', 'Hey everyone!<br>Welcome to Miscord 🤖') +
-      mkMsg(mkAvatar('#2d4a3e', '🧝', false), 'PixelGhost', '#57a560', '4:21 PM', "Yo! How's it going?") +
-      mkMsg(mkAvatar('#1e2535', '🤖', false), 'Helper Bot', '#b9c0ca', '4:21 PM',
-        `<div class="mc2-bot-card">👋 Welcome <span class="mc2-mention">@New_User</span> to Miscord!<br>Make sure to read <span class="mc2-mention">#rules</span></div>`,
-        'BOT') +
-      mkMsg(mkAvatar('#3b1f2b', '👾', false), 'RetroGamer', '#c77dff', '4:22 PM', 'Let\'s play something later 🎮') +
-      mkMsg(mkAvatar('#1a3320', '🌄', false), 'New_User', '#b9c0ca', '4:22 PM', 'Thanks! Glad to be here 😀');
+    const myInitial = (this.userName[0] || 'U').toUpperCase();
 
     win.innerHTML = `
-      <div class="xp-titlebar miscord-titlebar">
+      <div class="xp-titlebar">
         <img src="/miscord-icon.png" class="xp-win-icon-img" alt="Miscord" />
         <span class="xp-win-title">Miscord</span>
         <div class="xp-win-btns">
@@ -295,100 +273,54 @@ export class WinXPDesktop extends Scene {
           <button class="xp-wbtn xp-close" id="cls-${winId}" title="Close">✕</button>
         </div>
       </div>
-      <div class="mc2-body">
-        <div class="mc2-crt"></div>
+      <div class="mxp-body">
 
-        <!-- Server rail -->
-        <div class="mc2-server-rail">
-          <div class="mc2-srv-icon mc2-srv-active" title="Miscord">
+        <!-- Friends / contacts panel -->
+        <div class="mxp-friends-panel" id="mxp-friends-panel">
+          <div class="mxp-my-info">
+            <div class="mxp-my-avatar">${myInitial}</div>
+            <div class="mxp-my-details">
+              <div class="mxp-my-name">${this.esc(this.userName)}</div>
+              <div class="mxp-my-status">
+                <span class="mxp-dot mxp-dot-online"></span>Online
+              </div>
+            </div>
+          </div>
+          <div class="mxp-friends-scroll" id="mxp-friends-list">
+            <div class="mxp-section-hdr">ONLINE — 0</div>
+            <div class="mxp-empty-friends">Connecting to server…</div>
+          </div>
+        </div>
+
+        <!-- Chat panel -->
+        <div class="mxp-chat-panel" id="mxp-chat-panel">
+
+          <!-- No friend selected yet -->
+          <div class="mxp-no-chat" id="mxp-no-chat">
             <img src="/miscord-icon.png" alt="Miscord" />
+            <div class="mxp-no-chat-title">Miscord</div>
+            <div class="mxp-no-chat-sub">Select a friend to start chatting</div>
           </div>
-          <div class="mc2-srv-sep"></div>
-          <div class="mc2-srv-icon" title="Pixel World" style="background:#2d4a3e;font-size:22px">🌲</div>
-          <div class="mc2-srv-icon" title="RetroZone" style="background:#3b1f2b;font-size:22px">👾</div>
-          <div class="mc2-srv-icon" title="Void" style="background:#1a1a2a;font-size:22px">💀</div>
-          <div class="mc2-srv-add" title="Add Server">＋</div>
-        </div>
 
-        <!-- Channel sidebar -->
-        <div class="mc2-sidebar">
-          <div class="mc2-guild-header">
-            <span class="mc2-guild-name">Miscord</span>
-            <span class="mc2-guild-chevron">▾</span>
-          </div>
-          <div class="mc2-sidebar-scroll">
-            <div class="mc2-ch-group">
-              <div class="mc2-ch-section">
-                <span class="mc2-ch-section-arrow">▾</span>
-                <span>TEXT CHANNELS</span>
-                <button class="mc2-ch-add">＋</button>
+          <!-- Active DM (hidden until friend selected) -->
+          <div id="mxp-chat-active" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+            <div class="mxp-chat-hdr">
+              <button class="mxp-back-btn" id="mxp-back">&#9664; Back</button>
+              <div class="mxp-chat-hdr-avatar" id="mxp-hdr-avatar">?</div>
+              <div class="mxp-chat-hdr-name" id="mxp-hdr-name">Friend</div>
+              <div class="mxp-chat-hdr-status">
+                <span class="mxp-dot mxp-dot-online"></span>&nbsp;Online
               </div>
-              <div class="mc2-ch mc2-ch-active">
-                <span class="mc2-ch-hash">#</span><span>general</span>
-                <span class="mc2-ch-add-user">👤+</span>
-              </div>
-              <div class="mc2-ch"><span class="mc2-ch-hash">#</span><span>rules</span></div>
-              <div class="mc2-ch"><span class="mc2-ch-hash">#</span><span>memes</span></div>
-              <div class="mc2-ch"><span class="mc2-ch-hash">#</span><span>bot-commands</span></div>
             </div>
-            <div class="mc2-ch-group">
-              <div class="mc2-ch-section">
-                <span class="mc2-ch-section-arrow">▾</span>
-                <span>VOICE CHANNELS</span>
-                <button class="mc2-ch-add">＋</button>
-              </div>
-              <div class="mc2-ch mc2-ch-voice"><span class="mc2-ch-vol">🔉</span><span>General</span></div>
-              <div class="mc2-ch mc2-ch-voice"><span class="mc2-ch-vol">🔉</span><span>Gaming</span></div>
-              <div class="mc2-ch mc2-ch-voice"><span class="mc2-ch-vol">🔉</span><span>Music</span></div>
-              <div class="mc2-ch mc2-ch-voice"><span class="mc2-ch-vol">🔉</span><span>AFK</span></div>
+            <div class="mxp-messages" id="mxp-messages"></div>
+            <div class="mxp-input-area">
+              <input class="mxp-input" id="mxp-msg-input" type="text"
+                placeholder="Select a friend first…" maxlength="500"
+                autocomplete="off" spellcheck="false" disabled />
+              <button class="mxp-send-btn" id="mxp-send-btn" disabled>Send</button>
             </div>
           </div>
-          <div class="mc2-user-panel">
-            <div class="mc2-user-avatar">
-              <img src="/miscord-icon.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
-              <div class="mc2-user-status-dot"></div>
-            </div>
-            <div class="mc2-user-info">
-              <div class="mc2-user-name">${this.esc(this.userName)}</div>
-              <div class="mc2-user-disc">#0001</div>
-            </div>
-            <div class="mc2-user-actions">
-              <button class="mc2-ua-btn" title="Mute">🎤</button>
-              <button class="mc2-ua-btn" title="Deafen">🎧</button>
-              <button class="mc2-ua-btn" title="Settings">⚙</button>
-            </div>
-          </div>
-        </div>
 
-        <!-- Main chat -->
-        <div class="mc2-main">
-          <div class="mc2-topbar">
-            <div class="mc2-topbar-left">
-              <span class="mc2-topbar-hash">#</span>
-              <span class="mc2-topbar-channel">general</span>
-            </div>
-            <div class="mc2-topbar-right">
-              <button class="mc2-tb-btn" title="Notifications">🔔</button>
-              <button class="mc2-tb-btn" title="Pinned Messages">📌</button>
-              <button class="mc2-tb-btn" title="Members">👥</button>
-              <div class="mc2-search-wrap">
-                <input class="mc2-search" type="text" placeholder="Search" />
-                <span class="mc2-search-icon">🔍</span>
-              </div>
-              <button class="mc2-tb-btn" title="Help">❓</button>
-            </div>
-          </div>
-          <div class="mc2-messages" id="mc-messages-${winId}">${seedMsgs}</div>
-          <div class="mc2-input-wrap">
-            <button class="mc2-input-attach" title="Attach">＋</button>
-            <input class="mc2-input" id="mc-input-${winId}" type="text" placeholder="Message #general" maxlength="200" />
-            <div class="mc2-input-actions">
-              <button class="mc2-input-btn" title="Gift">🎁</button>
-              <button class="mc2-input-btn mc2-input-gif" title="GIF">GIF</button>
-              <button class="mc2-input-btn" title="Sticker">🎭</button>
-              <button class="mc2-input-btn" id="mc-send-${winId}" title="Send Emoji / Send">😊</button>
-            </div>
-          </div>
         </div>
       </div>
     `;
@@ -404,50 +336,186 @@ export class WinXPDesktop extends Scene {
     this.makeDraggable(winId);
     this.bringFront(winId);
 
+    // Window chrome
     win.querySelector('#min-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.minimizeWin(winId); });
     win.querySelector('#max-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.toggleMax(winId); });
     win.querySelector('#cls-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.closeWin(winId); });
     win.addEventListener('pointerdown', () => this.bringFront(winId));
 
-    const input = win.querySelector<HTMLInputElement>('#mc-input-' + winId)!;
-    const sendBtn = win.querySelector<HTMLButtonElement>('#mc-send-' + winId)!;
-    const msgArea = win.querySelector<HTMLElement>('#mc-messages-' + winId)!;
+    // Back button (mobile: return to friends list)
+    win.querySelector('#mxp-back')!.addEventListener('click', () => {
+      this.miscordActiveFriend = null;
+      win.querySelector<HTMLElement>('#mxp-chat-panel')!.classList.remove('mxp-visible');
+      win.querySelector<HTMLElement>('#mxp-chat-active')!.style.display = 'none';
+      win.querySelector<HTMLElement>('#mxp-no-chat')!.style.display = '';
+      this.refreshMiscordFriends();
+    });
 
-    const sendMessage = () => {
+    // Send message
+    const input   = win.querySelector<HTMLInputElement>('#mxp-msg-input')!;
+    const sendBtn = win.querySelector<HTMLButtonElement>('#mxp-send-btn')!;
+
+    const sendMsg = () => {
       const text = input.value.trim();
-      if (!text) return;
+      if (!text || !this.miscordActiveFriend) return;
       input.value = '';
-      const now = new Date();
-      const h = now.getHours() % 12 || 12;
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const ts = `${h}:${m} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
-      const msg = document.createElement('div');
-      msg.className = 'mc2-msg mc2-msg-own';
-      msg.innerHTML = `
-        <div class="mc2-avatar" style="background:#1a3a5c;overflow:hidden;padding:0">
-          <img src="/miscord-icon.png" style="width:100%;height:100%;object-fit:cover;" />
-        </div>
-        <div class="mc2-msg-right">
-          <div class="mc2-msg-header">
-            <span class="mc2-author" style="color:#c77dff">${this.esc(this.userName)}</span>
-            <span class="mc2-ts">Today at ${ts}</span>
-          </div>
-          <div class="mc2-msg-body">${this.esc(text)}</div>
-        </div>`;
-      msgArea.appendChild(msg);
+
+      const msg = { fromName: this.userName, text, ts: Date.now(), own: true, read: true };
+
+      if (!this.miscordDmHistory.has(this.miscordActiveFriend)) {
+        this.miscordDmHistory.set(this.miscordActiveFriend, []);
+      }
+      this.miscordDmHistory.get(this.miscordActiveFriend)!.push(msg);
+
+      const msgArea = win.querySelector<HTMLElement>('#mxp-messages')!;
+      msgArea.querySelector('.mxp-msg-empty')?.remove();
+      msgArea.insertAdjacentHTML('beforeend', this.renderMiscordMsg(msg));
       msgArea.scrollTop = msgArea.scrollHeight;
+
+      if (this.room) {
+        this.room.send('chat', { fromName: this.userName, to: this.miscordActiveFriend, text });
+      }
       SoundManager.click();
     };
 
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+    sendBtn.addEventListener('click', sendMsg);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMsg(); });
 
+    // Taskbar button
     const tbBtn = this.makeTbBtn(winId, 'Miscord', Icons.mycomputer);
     tbBtn.innerHTML = `<img src="/miscord-icon.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" /> Miscord`;
     document.getElementById('xp-programs')?.appendChild(tbBtn);
     this.tbBtns.set(winId, tbBtn);
 
-    setTimeout(() => { msgArea.scrollTop = msgArea.scrollHeight; }, 50);
+    this.refreshMiscordFriends();
+  }
+
+  // ── Miscord helpers ────────────────────────────────────────────────────────
+  private refreshMiscordFriends() {
+    const list = document.getElementById('mxp-friends-list');
+    if (!list) return;
+
+    const users = Array.from(this.miscordOnline.entries());
+
+    if (users.length === 0) {
+      list.innerHTML = `
+        <div class="mxp-section-hdr">ONLINE — 0</div>
+        <div class="mxp-empty-friends">No one else online yet.<br>Move your cursor to appear!</div>`;
+      return;
+    }
+
+    let html = `<div class="mxp-section-hdr">ONLINE — ${users.length}</div>`;
+    for (const [sid, { name, color }] of users) {
+      const initial  = (name[0] || '?').toUpperCase();
+      const isActive = this.miscordActiveFriend === sid;
+      const unread   = (this.miscordDmHistory.get(sid) || []).filter(m => !m.own && !m.read).length;
+      html += `
+        <div class="mxp-friend${isActive ? ' mxp-active' : ''}"
+             data-sid="${this.esc(sid)}" data-name="${this.esc(name)}" data-color="${this.esc(color)}">
+          <div class="mxp-friend-avatar" style="background:${color}">${initial}</div>
+          <span class="mxp-friend-name">${this.esc(name)}</span>
+          <span class="mxp-dot mxp-dot-online"></span>
+          ${unread > 0 ? `<span class="mxp-badge-unread">${unread}</span>` : ''}
+        </div>`;
+    }
+    list.innerHTML = html;
+
+    list.querySelectorAll<HTMLElement>('.mxp-friend').forEach(el => {
+      el.addEventListener('click', () => {
+        this.openMiscordDm(el.dataset.sid!, el.dataset.name!, el.dataset.color!);
+      });
+    });
+  }
+
+  private openMiscordDm(sid: string, name: string, color: string) {
+    this.miscordActiveFriend = sid;
+    const win = document.getElementById('win-miscord');
+    if (!win) return;
+
+    const chatPanel  = win.querySelector<HTMLElement>('#mxp-chat-panel')!;
+    const noChat     = win.querySelector<HTMLElement>('#mxp-no-chat')!;
+    const chatActive = win.querySelector<HTMLElement>('#mxp-chat-active')!;
+
+    // Mobile: slide in chat panel over friends list
+    if (window.innerWidth < 600) chatPanel.classList.add('mxp-visible');
+
+    // Update header
+    const hdrAvatar = win.querySelector<HTMLElement>('#mxp-hdr-avatar')!;
+    hdrAvatar.textContent = (name[0] || '?').toUpperCase();
+    hdrAvatar.style.background = color;
+    win.querySelector<HTMLElement>('#mxp-hdr-name')!.textContent = name;
+
+    // Show active chat
+    noChat.style.display = 'none';
+    chatActive.style.display = 'flex';
+
+    // Enable input
+    const input   = win.querySelector<HTMLInputElement>('#mxp-msg-input')!;
+    const sendBtn = win.querySelector<HTMLButtonElement>('#mxp-send-btn')!;
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.placeholder = `Message ${name}…`;
+    input.focus();
+
+    // Render message history
+    const msgArea = win.querySelector<HTMLElement>('#mxp-messages')!;
+    const history = this.miscordDmHistory.get(sid) || [];
+    if (history.length === 0) {
+      msgArea.innerHTML = `<div class="mxp-msg-empty">Start of your conversation with <b>${this.esc(name)}</b> — say hello! 👋</div>`;
+    } else {
+      msgArea.innerHTML = history.map(m => this.renderMiscordMsg(m)).join('');
+    }
+    msgArea.scrollTop = msgArea.scrollHeight;
+
+    // Mark as read, refresh list to clear badge
+    history.forEach(m => { m.read = true; });
+    this.refreshMiscordFriends();
+  }
+
+  private renderMiscordMsg(msg: { fromName: string; text: string; ts: number; own: boolean }): string {
+    const d = new Date(msg.ts);
+    const h = d.getHours() % 12 || 12;
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const ts  = `${h}:${m} ${d.getHours() >= 12 ? 'PM' : 'AM'}`;
+    const cls  = msg.own ? 'mxp-sent' : 'mxp-recv';
+    const name = msg.own ? this.userName : msg.fromName;
+    return `<div class="mxp-msg-row ${cls}">
+      <div class="mxp-msg-author">${this.esc(name)}</div>
+      <div class="mxp-bubble">${this.esc(msg.text)}</div>
+      <div class="mxp-msg-ts">${ts}</div>
+    </div>`;
+  }
+
+  private onMiscordChat(d: { from: string; fromName: string; to: string; text: string; ts: number }) {
+    const myId = this.room?.sessionId;
+    const isOwn = d.from === myId;
+    // Only show messages I sent or messages addressed to me
+    if (!isOwn && d.to !== myId) return;
+    // Which conversation bucket?
+    const convId = isOwn ? d.to : d.from;
+    if (!convId) return;
+
+    const msg = {
+      fromName: d.fromName,
+      text:     d.text,
+      ts:       d.ts,
+      own:      isOwn,
+      read:     this.miscordActiveFriend === convId,
+    };
+
+    if (!this.miscordDmHistory.has(convId)) this.miscordDmHistory.set(convId, []);
+    this.miscordDmHistory.get(convId)!.push(msg);
+
+    if (this.miscordActiveFriend === convId) {
+      const msgArea = document.getElementById('mxp-messages');
+      if (msgArea) {
+        msgArea.querySelector('.mxp-msg-empty')?.remove();
+        msgArea.insertAdjacentHTML('beforeend', this.renderMiscordMsg(msg));
+        msgArea.scrollTop = msgArea.scrollHeight;
+      }
+    } else {
+      this.refreshMiscordFriends(); // show unread badge
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -862,10 +930,24 @@ export class WinXPDesktop extends Scene {
 
       this.room!.onMessage('cursor', (d: { sessionId: string; x: number; y: number; name: string; color: string }) => {
         this.renderPeerCursor(d);
+        // Track for Miscord friends list
+        this.miscordOnline.set(d.sessionId, { name: d.name, color: d.color });
+        this.refreshMiscordFriends();
       });
       this.room!.onMessage('playerLeft', (d: { sessionId: string }) => {
         this.pCursors.get(d.sessionId)?.remove();
         this.pCursors.delete(d.sessionId);
+        this.miscordOnline.delete(d.sessionId);
+        if (this.miscordActiveFriend === d.sessionId) this.miscordActiveFriend = null;
+        this.refreshMiscordFriends();
+      });
+
+      this.room!.onMessage('presence', (d: { sessionId: string; name: string; color: string }) => {
+        this.miscordOnline.set(d.sessionId, { name: d.name, color: d.color });
+        this.refreshMiscordFriends();
+      });
+      this.room!.onMessage('chat', (d: { from: string; fromName: string; to: string; text: string; ts: number }) => {
+        this.onMiscordChat(d);
       });
 
       this.room!.onMessage('note:add',    (d: StickyNote) => this.renderNote(d));
@@ -877,6 +959,10 @@ export class WinXPDesktop extends Scene {
         this.stickyNotes.get(d.id)?.remove();
         this.stickyNotes.delete(d.id);
       });
+
+      // Announce presence so others can see us in Miscord
+      this.room!.send('presence', { name: this.userName });
+
     } catch (err) {
       console.warn('[XP] Multiplayer unavailable:', err);
     }

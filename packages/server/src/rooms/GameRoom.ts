@@ -23,6 +23,7 @@ export class GameRoom extends Room {
   private playerColors = new Map<string, string>();
   private colorIndex = 0;
   private notes = new Map<string, NoteData>();
+  private presences = new Map<string, { name: string; color: string }>();
 
   private getColor(client: Client): string {
     if (!this.playerColors.has(client.sessionId)) {
@@ -38,13 +39,45 @@ export class GameRoom extends Room {
   onCreate(_options: any): void {
     // Cursor sharing
     this.onMessage('cursor', (client: Client, data: { x: number; y: number; name: string }) => {
+      const color = this.getColor(client);
+      // Update presence with real color
+      this.presences.set(client.sessionId, { name: data.name || 'Player', color });
       this.broadcast('cursor', {
         sessionId: client.sessionId,
         x: data.x,
         y: data.y,
         name: data.name || 'Player',
-        color: this.getColor(client),
+        color,
       }, { except: client });
+    });
+
+    // Presence announcement (for Miscord friends list)
+    this.onMessage('presence', (client: Client, data: any) => {
+      const name  = String(data.name  || 'Player').slice(0, 32);
+      const color = this.getColor(client);
+      this.presences.set(client.sessionId, { name, color });
+      // Tell all others about this player
+      this.broadcast('presence', { sessionId: client.sessionId, name, color }, { except: client });
+      // Send all existing presences to this new client
+      this.presences.forEach((p, sid) => {
+        if (sid !== client.sessionId) {
+          client.send('presence', { sessionId: sid, name: p.name, color: p.color });
+        }
+      });
+    });
+
+    // DM / chat messages
+    this.onMessage('chat', (client: Client, data: any) => {
+      const msg = {
+        from:     client.sessionId,
+        fromName: String(data.fromName || 'Player').slice(0, 32),
+        to:       String(data.to || '').slice(0, 64),
+        text:     String(data.text || '').slice(0, 500),
+        ts:       Date.now(),
+      };
+      if (!msg.text) return;
+      // Broadcast to everyone — client-side filters by from/to
+      this.broadcast('chat', msg);
     });
 
     // Sticky notes
@@ -84,13 +117,13 @@ export class GameRoom extends Room {
 
   onJoin(client: Client, _options?: any): void {
     console.log(`[GameRoom] Client joined: ${client.sessionId}`);
-    // Send existing sticky notes to the newcomer
     this.notes.forEach(note => client.send('note:add', note));
   }
 
   onLeave(client: Client, _code?: number): void {
     console.log(`[GameRoom] Client left: ${client.sessionId}`);
     this.playerColors.delete(client.sessionId);
+    this.presences.delete(client.sessionId);
     this.broadcast('playerLeft', { sessionId: client.sessionId });
   }
 }
