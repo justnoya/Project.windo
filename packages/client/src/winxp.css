@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
 /* ═══════════════════════════════════════════════════════════════
    Windows XP Luna – Pixel-Perfect Desktop Stylesheet
    ═══════════════════════════════════════════════════════════════ */
@@ -867,3 +869,443 @@
   height: 17px;
   width: 17px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   SPLASH SCREEN — "Made By The Director @just.tiwari"
+   ═══════════════════════════════════════════════════════════════ */
+
+#splash-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.7s ease;
+}
+#splash-overlay.splash-fadeout { opacity: 0; }
+
+.splash-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.splash-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.18) 2px,
+    rgba(0,0,0,0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+  animation: scanroll 8s linear infinite;
+}
+@keyframes scanroll {
+  from { background-position: 0 0; }
+  to   { background-position: 0 100px; }
+}
+
+.splash-content {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.splash-made-by {
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: clamp(14px, 2.5vw, 28px);
+  color: #fff;
+  letter-spacing: 0.08em;
+  text-shadow:
+    0 0 8px rgba(255,255,255,0.8),
+    0 0 20px rgba(100,160,255,0.6),
+    2px 2px 0 #1a3a8a;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: splashSlideIn 0.8s cubic-bezier(0.22,1,0.36,1) 0.4s forwards,
+             splashGlitch 4s ease-in-out 1.4s infinite;
+}
+
+.splash-handle {
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: clamp(22px, 4vw, 48px);
+  color: #4a9eff;
+  letter-spacing: 0.12em;
+  text-shadow:
+    0 0 12px rgba(74,158,255,0.9),
+    0 0 30px rgba(74,158,255,0.5),
+    -2px 0 0 rgba(255,80,80,0.4),
+    2px 0 0 rgba(80,255,200,0.4);
+  opacity: 0;
+  transform: translateY(16px);
+  animation: splashSlideIn 0.7s cubic-bezier(0.22,1,0.36,1) 0.95s forwards,
+             splashHandleGlitch 3s ease-in-out 2s infinite;
+}
+
+.splash-cursor {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 20px;
+  color: #4a9eff;
+  opacity: 0;
+  animation: splashSlideIn 0.3s ease 1.5s forwards,
+             splashBlink 0.8s step-end 1.8s infinite;
+}
+
+@keyframes splashSlideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes splashBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+@keyframes splashGlitch {
+  0%, 90%, 100% { text-shadow: 0 0 8px rgba(255,255,255,0.8), 0 0 20px rgba(100,160,255,0.6), 2px 2px 0 #1a3a8a; transform: translate(0); clip-path: none; }
+  91%           { text-shadow: -3px 0 #ff3c3c, 3px 0 #3cffee; transform: translate(-2px, 0); }
+  92%           { text-shadow: 3px 0 #ff3c3c, -3px 0 #3cffee; transform: translate(2px, 0); }
+  93%           { text-shadow: 0 0 8px rgba(255,255,255,0.8); transform: translate(0); }
+}
+@keyframes splashHandleGlitch {
+  0%, 85%, 100% { text-shadow: 0 0 12px rgba(74,158,255,0.9), 0 0 30px rgba(74,158,255,0.5), -2px 0 0 rgba(255,80,80,0.4), 2px 0 0 rgba(80,255,200,0.4); transform: translate(0); }
+  86%           { text-shadow: -4px 0 #ff3c3c, 4px 0 #3cffee, 0 0 20px rgba(74,158,255,0.9); transform: translate(-3px, 1px) skewX(-2deg); }
+  87%           { text-shadow: 4px 0 #ff3c3c, -4px 0 #3cffee, 0 0 20px rgba(74,158,255,0.9); transform: translate(3px, -1px) skewX(2deg); }
+  88%           { text-shadow: 0 0 12px rgba(74,158,255,0.9); transform: translate(0); }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PRELOADER — Game Loading Screen (XP boot style)
+   ═══════════════════════════════════════════════════════════════ */
+
+#preloader-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 9998;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  transition: opacity 0.6s ease;
+}
+
+.pre-bg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 0;
+}
+
+.pre-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  animation: preLogoIn 1s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+}
+@keyframes preLogoIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.pre-logo-img {
+  width: clamp(240px, 38vw, 460px);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 0 18px rgba(74,120,255,0.5));
+}
+
+.pre-title {
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: clamp(10px, 1.6vw, 18px);
+  color: #fff;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 10px rgba(74,158,255,0.7), 2px 2px 0 #1a3a8a;
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: splashSlideIn 0.6s ease 1s forwards;
+}
+
+.pre-bar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  margin-bottom: 14px;
+}
+
+.pre-segments {
+  display: flex;
+  gap: 4px;
+}
+
+.pre-seg {
+  width: 28px;
+  height: 12px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #5aaeff 0%, #1a6acc 50%, #1050a0 100%);
+  box-shadow: 0 0 6px rgba(74,158,255,0.7);
+  opacity: 0;
+  transition: opacity 0.08s;
+}
+
+.pre-status {
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 12px;
+  color: #aaa;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  animation: splashSlideIn 0.5s ease 1.2s forwards;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   LOGIN SCREEN — Windows XP Welcome Screen Style
+   ═══════════════════════════════════════════════════════════════ */
+
+#login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  display: flex;
+  align-items: stretch;
+}
+
+.login-bg {
+  width: 100%;
+  background: linear-gradient(180deg,
+    #1a4fa8 0%, #1a5fcc 15%,
+    #1260cc 50%, #0e4faa 80%, #093a88 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.login-loading-pulse {
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 16px;
+  color: #aac8ff;
+  text-align: center;
+  margin: auto;
+  animation: splashBlink 1s step-end infinite;
+}
+
+/* ── Top bar ── */
+.login-top-bar {
+  background: linear-gradient(180deg, #0a3a8a 0%, #0c4499 60%, #0e4faa 100%);
+  padding: 14px 36px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 2px solid #1c7aff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  animation: splashSlideIn 0.5s ease 0.1s both;
+}
+
+.login-top-title {
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+  font-size: 24px;
+  font-style: italic;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.login-top-xp {
+  color: #7ec8ff;
+  margin-left: 4px;
+}
+
+.login-top-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255,255,255,0.25);
+  margin: 0 8px;
+}
+
+.login-top-subtitle {
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 13px;
+  color: #c8e0ff;
+  font-style: italic;
+}
+
+/* ── Center ── */
+.login-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.login-user-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px;
+  padding: 24px 32px;
+  cursor: pointer;
+  min-width: 340px;
+  max-width: 480px;
+  transition: background 0.2s;
+  animation: loginCardIn 0.6s cubic-bezier(0.22,1,0.36,1) 0.3s both;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+.login-user-card:hover { background: rgba(255,255,255,0.11); }
+
+@keyframes loginCardIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.login-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #2060c0 0%, #0e3a8a 100%);
+  border: 3px solid rgba(255,255,255,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.login-avatar-icon { font-size: 38px; line-height: 1; }
+
+.login-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.login-username {
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.login-password-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.login-password-input {
+  width: 100%;
+  padding: 5px 10px;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 3px;
+  background: rgba(255,255,255,0.9);
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 13px;
+  color: #000;
+  outline: none;
+  box-sizing: border-box;
+}
+.login-password-input:focus { border-color: #fff; box-shadow: 0 0 4px rgba(255,255,255,0.6); }
+
+.login-arrow-btn {
+  padding: 5px 14px;
+  background: linear-gradient(180deg, #5aaa20 0%, #3a8800 60%, #2e7000 100%);
+  color: #fff;
+  border: 1px solid #2a6000;
+  border-radius: 3px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: Tahoma, Arial, sans-serif;
+  transition: background 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.login-arrow-btn:hover { background: linear-gradient(180deg, #6abb30 0%, #4a9800 60%, #3e8010 100%); }
+
+.login-hint {
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 10px;
+  color: rgba(200,224,255,0.65);
+  font-style: italic;
+}
+
+.login-error {
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 11px;
+  color: #ff9090;
+  background: rgba(180,0,0,0.25);
+  border: 1px solid rgba(255,80,80,0.4);
+  border-radius: 2px;
+  padding: 3px 8px;
+}
+
+@keyframes loginShake {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+.login-shake { animation: loginShake 0.45s ease; }
+
+/* ── Bottom bar ── */
+.login-bottom-bar {
+  background: linear-gradient(180deg, #0a3a8a 0%, #0c4499 60%, #0e4faa 100%);
+  padding: 12px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 2px solid #1c7aff;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.4);
+  animation: splashSlideIn 0.5s ease 0.15s both;
+}
+
+.login-bottom-actions { display: flex; gap: 12px; }
+
+.login-bottom-btn {
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 12px;
+  color: #c8e0ff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.login-bottom-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+.login-bottom-logo {
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+  font-style: italic;
+  font-weight: bold;
+  font-size: 20px;
+  color: #fff;
+  opacity: 0.7;
+  display: flex;
+  gap: 4px;
+}
+.login-bottom-xp { color: #7ec8ff; }

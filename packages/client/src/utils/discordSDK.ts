@@ -113,4 +113,11 @@ function getOverrideOrRandomSessionValue(queryParam: `${SessionStorageQueryParam
   return randomString;
 }
 
-export { discordSdk, initiateDiscordSDK, authorizeDiscordUser, getUserName };
+const getIsEmbedded = () => isEmbedded;
+
+const getUserId = () => {
+  if (!auth) return null;
+  return auth.user.id;
+};
+
+export { discordSdk, initiateDiscordSDK, authorizeDiscordUser, getUserName, getUserId, getIsEmbedded };

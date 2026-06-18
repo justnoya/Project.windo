@@ -1,35 +1,88 @@
 import { Scene } from "phaser";
 
 export class Preloader extends Scene {
+  private overlay!: HTMLDivElement;
+  private segTimer: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
     super("Preloader");
   }
 
-  init() {
-    const W = this.cameras.main.width;
-    const H = this.cameras.main.height;
-
-    // Show bliss image behind loading bar
-    if (this.textures.exists("bliss")) {
-      const bg = this.add.image(W / 2, H / 2, "bliss");
-      const s = Math.max(W / bg.width, H / bg.height);
-      bg.setScale(s).setScrollFactor(0);
-    }
-
-    // XP-style progress bar
-    this.add.rectangle(W / 2, H * 0.85, 302, 14).setStrokeStyle(1, 0xffffff);
-    const bar = this.add.rectangle(W / 2 - 148, H * 0.85, 4, 10, 0x3a88dc).setOrigin(0, 0.5);
-
-    this.load.on("progress", (p: number) => {
-      bar.width = 4 + 292 * p;
-    });
-  }
-
   preload() {
-    // No additional assets to preload — icons are inline SVG, bliss loaded in Boot
+    this.load.image("tws-logo", "/tws-logo.png");
   }
 
   create() {
-    this.scene.start("MainMenu");
+    this.cameras.main.setBackgroundColor(0x000000);
+
+    this.overlay = document.createElement("div");
+    this.overlay.id = "preloader-overlay";
+    this.overlay.innerHTML = `
+      <div class="pre-bg">
+        <div class="pre-logo-wrap">
+          <img class="pre-logo-img" src="/tws-logo.png" alt="The Waiting Screen" />
+        </div>
+        <div class="pre-title">The Waiting Screen</div>
+        <div class="pre-bar-wrap">
+          <div class="pre-segments" id="pre-segments"></div>
+        </div>
+        <div class="pre-status" id="pre-status">Loading…</div>
+      </div>
+    `;
+    document.body.appendChild(this.overlay);
+
+    const container = document.getElementById("pre-segments");
+    const statusEl = document.getElementById("pre-status");
+    const TOTAL_SEGS = 12;
+    const VISIBLE = 5;
+
+    let offset = 0;
+    if (container) {
+      for (let i = 0; i < TOTAL_SEGS; i++) {
+        const seg = document.createElement("div");
+        seg.className = "pre-seg";
+        container.appendChild(seg);
+      }
+      const segs = container.querySelectorAll<HTMLElement>(".pre-seg");
+
+      const updateSegs = () => {
+        segs.forEach((s, i) => {
+          const pos = (i - offset + TOTAL_SEGS) % TOTAL_SEGS;
+          s.style.opacity = pos < VISIBLE ? String(1 - pos * 0.15) : "0";
+        });
+        offset = (offset + 1) % TOTAL_SEGS;
+      };
+
+      this.segTimer = setInterval(updateSegs, 100);
+    }
+
+    const statuses = ["Initializing…", "Loading assets…", "Connecting servers…", "Almost there…"];
+    let si = 0;
+    const statusTimer = setInterval(() => {
+      si = (si + 1) % statuses.length;
+      if (statusEl) statusEl.textContent = statuses[si];
+    }, 800);
+
+    this.time.delayedCall(3500, () => {
+      if (this.segTimer) clearInterval(this.segTimer);
+      clearInterval(statusTimer);
+      this.overlay.style.transition = "opacity 0.6s";
+      this.overlay.style.opacity = "0";
+      this.time.delayedCall(600, () => {
+        this.cleanup();
+        this.scene.start("LoginScreen");
+      });
+    });
+  }
+
+  private cleanup() {
+    if (this.segTimer) { clearInterval(this.segTimer); this.segTimer = null; }
+    if (this.overlay && this.overlay.parentNode) {
+      this.overlay.parentNode.removeChild(this.overlay);
+    }
+  }
+
+  shutdown() {
+    this.cleanup();
   }
 }

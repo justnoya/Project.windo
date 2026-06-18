@@ -3,8 +3,9 @@ import { ScaleFlow } from "./utils/ScaleFlow";
 import { initiateDiscordSDK } from "./utils/discordSDK";
 
 import { Boot } from "./scenes/Boot";
+import { SplashScreen } from "./scenes/SplashScreen";
 import { Preloader } from "./scenes/Preloader";
-import { MainMenu } from "./scenes/MainMenu";
+import { LoginScreen } from "./scenes/LoginScreen";
 import { WinXPDesktop } from "./scenes/WinXPDesktop";
 
 (async () => {
@@ -18,6 +19,6 @@ import { WinXPDesktop } from "./scenes/WinXPDesktop";
     backgroundColor: "#000000",
     roundPixels: false,
     pixelArt: false,
-    scene: [Boot, Preloader, MainMenu, WinXPDesktop],
+    scene: [Boot, SplashScreen, Preloader, LoginScreen, WinXPDesktop],
   });
 })();
