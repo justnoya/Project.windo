@@ -28,24 +28,6 @@ interface StickyNote {
 
 const CURSOR_COLORS = ['#FF4444','#4488FF','#44CC88','#FFAA44','#AA44FF','#FF44AA','#44DDFF','#FFDD44'];
 
-const WYP_CHARS: Array<{ name: string; emoji: string; hints: string[] }> = [
-  { name:'Mario',        emoji:'🍄', hints:['Italian plumber','Nintendo icon','Jumps on enemies','Saves Princess Peach'] },
-  { name:'Sonic',        emoji:'💨', hints:['Fastest thing alive','Blue hedgehog','Sega mascot','Hates water'] },
-  { name:'Pikachu',      emoji:'⚡', hints:['Electric type','Says own name',"Ash's partner",'#025 in Pokédex'] },
-  { name:'Link',         emoji:'🗡️', hints:['Green tunic hero','Hyrule Kingdom','Master Sword','Never speaks'] },
-  { name:'Master Chief', emoji:'🪖', hints:['Spartan-117','Xbox icon','Fights Covenant','Face always hidden'] },
-  { name:'Lara Croft',   emoji:'🏹', hints:['Tomb Raider','British archaeologist','Dual pistols','Expert climber'] },
-  { name:'Pac-Man',      emoji:'🟡', hints:['Eats dots','1980 arcade classic','Scared of ghosts','Waka waka'] },
-  { name:'Mega Man',     emoji:'🤖', hints:['Blue robot','Arm cannon','Fights Robot Masters','Capcom game'] },
-  { name:'Kirby',        emoji:'💗', hints:['Swallows enemies','Pink puffball','Dream Land hero','Copy ability'] },
-  { name:'Samus',        emoji:'🚀', hints:['Bounty hunter','Power Suit','Fights Metroids','Secretly a woman'] },
-  { name:'Donkey Kong',  emoji:'🍌', hints:['Throws barrels','King of the jungle','Wears a red tie','Big ape'] },
-  { name:'Cloud',        emoji:'⚔️', hints:['Enormous sword','Spiky blonde hair','Ex-SOLDIER','Final Fantasy VII'] },
-  { name:'Doom Slayer',  emoji:'💀', hints:['Rips and tears','UAC Mars base','Fights demons','Too angry to die'] },
-  { name:'Crash',        emoji:'🌀', hints:['Spinning attack','Orange marsupial','Aku Aku mask','N. Sanity Beach'] },
-  { name:'Spyro',        emoji:'🔥', hints:['Purple dragon','Breathes fire','Glides not flies','Collects gems'] },
-  { name:'Snake',        emoji:'📦', hints:['Hides in boxes','Tactical espionage','Smokes cigarettes','Metal Gear hero'] },
-];
 
 export class WinXPDesktop extends Scene {
   private bg!: Phaser.GameObjects.Image;
@@ -72,13 +54,6 @@ export class WinXPDesktop extends Scene {
   private storyEngaged = false;
   private storyPhase = 0;
   private notifContainer: HTMLElement | null = null;
-
-  private wyp_myChar: string | null = null;
-  private wyp_myEmoji = '';
-  private wyp_myHintIdx = 0;
-  private wyp_phase: 'pick' | 'play' = 'pick';
-  private wyp_players = new Map<string, { name: string; color: string; ready: boolean; hints: string[]; revealed: boolean; character?: string; emoji?: string; guesserName?: string }>();
-  private wyp_scores = new Map<string, number>();
 
   constructor() { super('WinXPDesktop'); }
 
@@ -145,7 +120,6 @@ export class WinXPDesktop extends Scene {
     this.overlay.appendChild(area);
     area.appendChild(this.makeDesktopIcon('My Computer', Icons.mycomputer, () => this.openExplorer('root')));
     area.appendChild(this.makeDesktopIconImg('Miscord', '/miscord-icon.png', () => this.openMiscord()));
-    area.appendChild(this.makeDesktopIconImg('Who You Play?', '/wyp-icon.png', () => this.openWhoYouPlay()));
   }
 
   private makeDesktopIcon(label: string, svg: string, onOpen: () => void): HTMLElement {
@@ -799,309 +773,6 @@ export class WinXPDesktop extends Scene {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // WHO YOU PLAY — MULTIPLAYER GUESSING GAME
-  // ══════════════════════════════════════════════════════════════════════════
-  private openWhoYouPlay() {
-    const winId = 'whoyouplay';
-    this.trackRecent(winId, 'Who You Play?',
-      `<img src="/wyp-icon.png" class="xp-sm-recent-icon" />`,
-      () => this.openWhoYouPlay());
-    if (this.wins.has(winId)) {
-      const ws = this.wins.get(winId)!;
-      if (ws.minimized) this.restoreWin(winId);
-      else this.bringFront(winId);
-      return;
-    }
-    SoundManager.windowOpen();
-    const win = document.createElement('div');
-    win.className = 'xp-window wyp-window';
-    win.id = 'win-' + winId;
-    win.style.zIndex = String(++this.zTop);
-    win.innerHTML = `
-      <div class="xp-titlebar">
-        <img src="/wyp-icon.png" class="xp-win-icon-img" alt="Who You Play?" />
-        <span class="xp-win-title">Who You Play?</span>
-        <div class="xp-win-btns">
-          <button class="xp-wbtn" id="min-${winId}" title="Minimize">─</button>
-          <button class="xp-wbtn" id="max-${winId}" title="Maximize">☐</button>
-          <button class="xp-wbtn xp-close" id="cls-${winId}" title="Close">✕</button>
-        </div>
-      </div>
-      <div class="wyp-body" id="wyp-body">${this.wyp_buildPickPhase()}</div>`;
-    this.overlay.appendChild(win);
-    this.positionWin(win);
-    this.wins.set(winId, { el: win, titlebar: win.querySelector<HTMLElement>('.xp-titlebar')!, minimized: false, maximized: false });
-    this.makeDraggable(winId);
-    this.bringFront(winId);
-    win.querySelector('#min-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.minimizeWin(winId); });
-    win.querySelector('#max-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.toggleMax(winId); });
-    win.querySelector('#cls-' + winId)!.addEventListener('click', e => { e.stopPropagation(); this.closeWin(winId); });
-    win.addEventListener('pointerdown', () => this.bringFront(winId));
-    this.wyp_wirePickPhase(win);
-    const tbBtn = this.makeTbBtn(winId, 'Who You Play?', Icons.mycomputer);
-    tbBtn.innerHTML = `<img src="/wyp-icon.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" /> Who You Play?`;
-    document.getElementById('xp-programs')?.appendChild(tbBtn);
-    this.tbBtns.set(winId, tbBtn);
-  }
-
-  private wyp_buildPickPhase(): string {
-    const cards = WYP_CHARS.map(c =>
-      `<div class="wyp-char-card" data-char="${this.esc(c.name)}" data-emoji="${c.emoji}">
-        <div class="wyp-char-emoji">${c.emoji}</div>
-        <div class="wyp-char-name">${this.esc(c.name)}</div>
-      </div>`
-    ).join('');
-    return `
-      <div class="wyp-pick-phase">
-        <div class="wyp-pick-header">
-          <div class="wyp-pick-title">🎮 Who Are You Playing?</div>
-          <div class="wyp-pick-sub">Pick your character — others must guess!</div>
-        </div>
-        <div class="wyp-chars-grid">${cards}</div>
-        <div class="wyp-pick-confirm" id="wyp-pick-confirm" style="display:none">
-          <span id="wyp-picked-preview"></span>
-          <button class="wyp-confirm-btn" id="wyp-confirm-btn">▶ Play as this character!</button>
-        </div>
-      </div>`;
-  }
-
-  private wyp_wirePickPhase(win: HTMLElement) {
-    let selectedChar: typeof WYP_CHARS[0] | null = null;
-    win.querySelectorAll<HTMLElement>('.wyp-char-card').forEach(card => {
-      card.addEventListener('pointerdown', e => {
-        e.stopPropagation();
-        SoundManager.click();
-        win.querySelectorAll('.wyp-char-card').forEach(c => c.classList.remove('wyp-selected'));
-        card.classList.add('wyp-selected');
-        selectedChar = WYP_CHARS.find(c => c.name === card.dataset.char) || null;
-        const confirm = win.querySelector<HTMLElement>('#wyp-pick-confirm')!;
-        const preview = win.querySelector<HTMLElement>('#wyp-picked-preview')!;
-        confirm.style.display = 'flex';
-        preview.textContent = `${selectedChar?.emoji || ''} ${selectedChar?.name || ''}`;
-      });
-    });
-    win.querySelector('#wyp-confirm-btn')?.addEventListener('click', () => {
-      if (!selectedChar) return;
-      SoundManager.wypPick();
-      this.wyp_myChar = selectedChar.name;
-      this.wyp_myEmoji = selectedChar.emoji;
-      this.wyp_myHintIdx = 0;
-      this.wyp_phase = 'play';
-      this.room?.send('wyp:ready', { name: this.userName });
-      win.querySelector<HTMLElement>('#wyp-body')!.innerHTML = this.wyp_buildPlayPhase();
-      this.wyp_wirePlayPhase(win);
-    });
-  }
-
-  private wyp_buildPlayPhase(): string {
-    const char = WYP_CHARS.find(c => c.name === this.wyp_myChar);
-    const hintsLeft = char ? char.hints.length - this.wyp_myHintIdx : 0;
-    return `
-      <div class="wyp-play-phase">
-        <div class="wyp-play-left">
-          <div class="wyp-my-secret">
-            <div class="wyp-secret-label">🔒 Your secret character</div>
-            <div class="wyp-secret-char">
-              <span class="wyp-secret-emoji">${this.wyp_myEmoji}</span>
-              <span class="wyp-secret-name">${this.esc(this.wyp_myChar || '')}</span>
-            </div>
-            <div class="wyp-hints-given" id="wyp-hints-given"></div>
-            <button class="wyp-hint-btn" id="wyp-hint-btn" ${hintsLeft === 0 ? 'disabled' : ''}>
-              💡 Drop Hint <span class="wyp-hint-count">(${hintsLeft} left)</span>
-            </button>
-          </div>
-          <div class="wyp-score-panel">
-            <div class="wyp-score-title">🏆 Scores</div>
-            <div id="wyp-scores"><div class="wyp-empty">No scores yet</div></div>
-          </div>
-        </div>
-        <div class="wyp-play-right">
-          <div class="wyp-players-section">
-            <div class="wyp-section-label">👥 Players</div>
-            <div id="wyp-players-list" class="wyp-players-list">
-              <div class="wyp-empty">Waiting for others to join…</div>
-            </div>
-          </div>
-          <div class="wyp-feed-section">
-            <div class="wyp-section-label">📡 Activity</div>
-            <div id="wyp-feed" class="wyp-feed"></div>
-          </div>
-          <div class="wyp-guess-row">
-            <select class="wyp-guess-select" id="wyp-guess-select">
-              <option value="">Guess about…</option>
-            </select>
-            <input class="wyp-guess-input" id="wyp-guess-input" type="text"
-              placeholder="Character name…" maxlength="60" autocomplete="off" />
-            <button class="wyp-guess-btn" id="wyp-guess-btn">Guess!</button>
-          </div>
-          <button class="wyp-reset-btn" id="wyp-reset-btn">🔄 New Game</button>
-        </div>
-      </div>`;
-  }
-
-  private wyp_wirePlayPhase(win: HTMLElement) {
-    this.wyp_refreshPlayers(win);
-    this.wyp_refreshScores(win);
-
-    win.querySelector('#wyp-hint-btn')?.addEventListener('click', () => {
-      const char = WYP_CHARS.find(c => c.name === this.wyp_myChar);
-      if (!char || this.wyp_myHintIdx >= char.hints.length) return;
-      const hint = char.hints[this.wyp_myHintIdx++];
-      SoundManager.wypHint();
-      this.room?.send('wyp:hint', { hint });
-      const given = win.querySelector<HTMLElement>('#wyp-hints-given')!;
-      const tag = document.createElement('span');
-      tag.className = 'wyp-hint-tag'; tag.textContent = hint;
-      given.appendChild(tag);
-      const btn = win.querySelector<HTMLButtonElement>('#wyp-hint-btn')!;
-      const left = char.hints.length - this.wyp_myHintIdx;
-      btn.disabled = left === 0;
-      (btn.querySelector('.wyp-hint-count') as HTMLElement).textContent = `(${left} left)`;
-    });
-
-    const sendGuess = () => {
-      const select = win.querySelector<HTMLSelectElement>('#wyp-guess-select')!;
-      const input  = win.querySelector<HTMLInputElement>('#wyp-guess-input')!;
-      const targetId = select.value; const guess = input.value.trim();
-      if (!targetId || !guess) return;
-      input.value = '';
-      SoundManager.click();
-      this.room?.send('wyp:guess', { fromName: this.userName, targetId, guess });
-      this.wyp_addFeed(win, `🤔 You guessed <b>${this.esc(guess)}</b> for ${this.esc(this.wyp_players.get(targetId)?.name || 'someone')}`);
-    };
-    win.querySelector('#wyp-guess-btn')?.addEventListener('click', sendGuess);
-    win.querySelector<HTMLInputElement>('#wyp-guess-input')?.addEventListener('keydown', e => { if (e.key === 'Enter') sendGuess(); });
-
-    win.querySelector('#wyp-reset-btn')?.addEventListener('click', () => {
-      SoundManager.click();
-      this.room?.send('wyp:reset', {});
-      this.wyp_doReset(win);
-    });
-  }
-
-  private wyp_refreshPlayers(win: HTMLElement) {
-    const list   = win.querySelector<HTMLElement>('#wyp-players-list');
-    const select = win.querySelector<HTMLSelectElement>('#wyp-guess-select');
-    if (!list) return;
-    const players = Array.from(this.wyp_players.entries());
-    if (players.length === 0) {
-      list.innerHTML = '<div class="wyp-empty">Waiting for others to join…</div>';
-    } else {
-      list.innerHTML = players.map(([sid, p]) => {
-        const badge = p.revealed
-          ? `<span class="wyp-char-badge wyp-revealed">${p.emoji || '🎮'} ${this.esc(p.character || '')}</span>`
-          : `<span class="wyp-char-badge wyp-hidden">???</span>`;
-        const hints = p.hints.length > 0
-          ? `<div class="wyp-player-hints">${p.hints.map(h => `<span class="wyp-hint-tag-sm">${this.esc(h)}</span>`).join('')}</div>` : '';
-        const guesser = p.revealed && p.guesserName
-          ? `<span class="wyp-guessed-by">— guessed by ${this.esc(p.guesserName)}</span>` : '';
-        return `<div class="wyp-player-row${p.revealed ? ' wyp-p-revealed' : ''}">
-          <div class="wyp-p-avatar" style="background:${p.color}">${(p.name[0] || '?').toUpperCase()}</div>
-          <div class="wyp-p-info">
-            <div class="wyp-p-name">${this.esc(p.name)} ${badge} ${guesser}</div>
-            ${hints}
-          </div>
-        </div>`;
-      }).join('');
-    }
-    if (select) {
-      const cur = select.value;
-      select.innerHTML = '<option value="">Guess about…</option>';
-      players.filter(([, p]) => !p.revealed).forEach(([sid, p]) => {
-        const opt = document.createElement('option');
-        opt.value = sid; opt.textContent = p.name;
-        if (sid === cur) opt.selected = true;
-        select.appendChild(opt);
-      });
-    }
-  }
-
-  private wyp_refreshScores(win: HTMLElement) {
-    const el = win.querySelector<HTMLElement>('#wyp-scores');
-    if (!el) return;
-    const scores = Array.from(this.wyp_scores.entries()).sort((a, b) => b[1] - a[1]);
-    if (scores.length === 0) { el.innerHTML = '<div class="wyp-empty">No scores yet</div>'; return; }
-    el.innerHTML = scores.map(([sid, score]) => {
-      const name = sid === this.room?.sessionId ? 'You' : (this.wyp_players.get(sid)?.name || 'Player');
-      return `<div class="wyp-score-row"><span>${this.esc(name)}</span><span class="wyp-score-pts">${score} pt${score !== 1 ? 's' : ''}</span></div>`;
-    }).join('');
-  }
-
-  private wyp_addFeed(win: HTMLElement, html: string) {
-    const feed = win.querySelector<HTMLElement>('#wyp-feed');
-    if (!feed) return;
-    const item = document.createElement('div');
-    item.className = 'wyp-feed-item'; item.innerHTML = html;
-    feed.appendChild(item);
-    if (feed.children.length > 40) feed.removeChild(feed.firstChild!);
-    feed.scrollTop = feed.scrollHeight;
-  }
-
-  private wyp_doReset(win: HTMLElement) {
-    this.wyp_myChar = null; this.wyp_myEmoji = ''; this.wyp_myHintIdx = 0;
-    this.wyp_phase = 'pick'; this.wyp_players.clear(); this.wyp_scores.clear();
-    win.querySelector<HTMLElement>('#wyp-body')!.innerHTML = this.wyp_buildPickPhase();
-    this.wyp_wirePickPhase(win);
-  }
-
-  private wyp_onReady(d: { sessionId: string; name: string }) {
-    const color = CURSOR_COLORS[this.wyp_players.size % CURSOR_COLORS.length];
-    if (!this.wyp_players.has(d.sessionId))
-      this.wyp_players.set(d.sessionId, { name: d.name, color, ready: true, hints: [], revealed: false });
-    else
-      this.wyp_players.get(d.sessionId)!.ready = true;
-    const win = document.getElementById('win-whoyouplay');
-    if (!win) return;
-    this.wyp_refreshPlayers(win);
-    this.wyp_addFeed(win, `🎮 <b>${this.esc(d.name)}</b> has picked a character!`);
-  }
-
-  private wyp_onHint(d: { sessionId: string; hint: string }) {
-    const player = this.wyp_players.get(d.sessionId);
-    if (player) player.hints.push(d.hint);
-    const win = document.getElementById('win-whoyouplay');
-    if (!win) return;
-    SoundManager.wypHint();
-    this.wyp_addFeed(win, `💡 <b>${this.esc(player?.name || 'Someone')}</b>: "${this.esc(d.hint)}"`);
-    this.wyp_refreshPlayers(win);
-  }
-
-  private wyp_onGuess(d: { from: string; fromName: string; targetId: string; guess: string }) {
-    const win = document.getElementById('win-whoyouplay');
-    if (win) {
-      const tName = this.wyp_players.get(d.targetId)?.name || 'someone';
-      this.wyp_addFeed(win, `🤔 <b>${this.esc(d.fromName)}</b> guessed "<b>${this.esc(d.guess)}</b>" for ${this.esc(tName)}`);
-    }
-    if (d.targetId === this.room?.sessionId && this.wyp_myChar && this.wyp_phase === 'play') {
-      if (d.guess.toLowerCase().trim() === this.wyp_myChar.toLowerCase().trim()) {
-        SoundManager.wypReveal();
-        this.room!.send('wyp:reveal', { character: this.wyp_myChar, emoji: this.wyp_myEmoji, guesserName: d.fromName });
-        this.wyp_scores.set(d.from, (this.wyp_scores.get(d.from) || 0) + 1);
-        if (win) {
-          this.wyp_addFeed(win, `🎉 <b>${this.esc(d.fromName)}</b> correctly guessed <b>${this.wyp_myEmoji} ${this.esc(this.wyp_myChar)}</b>!`);
-          this.wyp_refreshScores(win);
-        }
-      }
-    }
-  }
-
-  private wyp_onReveal(d: { sessionId: string; character: string; emoji: string; guesserName: string }) {
-    const player = this.wyp_players.get(d.sessionId);
-    if (player) { player.revealed = true; player.character = d.character; player.emoji = d.emoji; player.guesserName = d.guesserName; }
-    const win = document.getElementById('win-whoyouplay');
-    if (!win) return;
-    SoundManager.wypCorrect();
-    this.wyp_addFeed(win, `🎊 <b>${this.esc(player?.name || 'Player')}</b> was <b>${d.emoji} ${this.esc(d.character)}</b> — guessed by <b>${this.esc(d.guesserName)}</b>!`);
-    this.wyp_refreshPlayers(win);
-    this.wyp_refreshScores(win);
-  }
-
-  private wyp_onReset() {
-    const win = document.getElementById('win-whoyouplay');
-    if (win) this.wyp_doReset(win);
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
   // FILE EXPLORER WINDOW
   // ══════════════════════════════════════════════════════════════════════════
   openExplorer(startId: string) {
@@ -1464,7 +1135,7 @@ export class WinXPDesktop extends Scene {
     let _lastHover: Element | null = null;
     document.addEventListener('mouseover', e => {
       const t = (e.target as HTMLElement).closest(
-        '.xp-icon, .xp-ctx-item:not(.xp-disabled), .xp-mitem, .xp-tb-btn, .xp-wbtn, .xp-sm-item:not(.xp-disabled), .xp-sb-link, .xp-nav:not(:disabled), .wyp-char-card, .wyp-hint-btn, .wyp-guess-btn, .wyp-confirm-btn, .wyp-reset-btn, .mxp-friend, .xp-sm-footer-btn'
+        '.xp-icon, .xp-ctx-item:not(.xp-disabled), .xp-mitem, .xp-tb-btn, .xp-wbtn, .xp-sm-item:not(.xp-disabled), .xp-sb-link, .xp-nav:not(:disabled), .mxp-friend, .xp-sm-footer-btn'
       );
       if (t && t !== _lastHover) { _lastHover = t; SoundManager.hover(); }
     });
@@ -1495,35 +1166,24 @@ export class WinXPDesktop extends Scene {
       this.renderPeerCursor(d);
       this.miscordOnline.set(d.sessionId, { name: d.name, color: d.color });
       this.refreshMiscordFriends();
-      if (!this.wyp_players.has(d.sessionId))
-        this.wyp_players.set(d.sessionId, { name: d.name, color: d.color, ready: false, hints: [], revealed: false });
+
     });
     this.room.onMessage('playerLeft', (d: { sessionId: string }) => {
       this.pCursors.get(d.sessionId)?.remove();
       this.pCursors.delete(d.sessionId);
       this.miscordOnline.delete(d.sessionId);
-      this.wyp_players.delete(d.sessionId);
       if (this.miscordActiveFriend === d.sessionId) this.miscordActiveFriend = null;
       this.refreshMiscordFriends();
-      const wypWin = document.getElementById('win-whoyouplay');
-      if (wypWin && this.wyp_phase === 'play') this.wyp_refreshPlayers(wypWin);
     });
     this.room.onMessage('presence', (d: { sessionId: string; name: string; color: string }) => {
       this.miscordOnline.set(d.sessionId, { name: d.name, color: d.color });
       this.refreshMiscordFriends();
-      if (!this.wyp_players.has(d.sessionId))
-        this.wyp_players.set(d.sessionId, { name: d.name, color: d.color, ready: false, hints: [], revealed: false });
-      const wypWin = document.getElementById('win-whoyouplay');
-      if (wypWin && this.wyp_phase === 'play') this.wyp_refreshPlayers(wypWin);
+
     });
     this.room.onMessage('chat', (d: { from: string; fromName: string; to: string; text: string; ts: number }) => {
       this.onMiscordChat(d);
     });
-    this.room.onMessage('wyp:ready',  (d: { sessionId: string; name: string })  => this.wyp_onReady(d));
-    this.room.onMessage('wyp:hint',   (d: { sessionId: string; hint: string })  => this.wyp_onHint(d));
-    this.room.onMessage('wyp:guess',  (d: { from: string; fromName: string; targetId: string; guess: string }) => this.wyp_onGuess(d));
-    this.room.onMessage('wyp:reveal', (d: { sessionId: string; character: string; emoji: string; guesserName: string }) => this.wyp_onReveal(d));
-    this.room.onMessage('wyp:reset',  () => this.wyp_onReset());
+
     this.room.onMessage('note:add',    (d: StickyNote) => this.renderNote(d));
     this.room.onMessage('note:move',   (d: { id: string; x: number; y: number }) => {
       const el = this.stickyNotes.get(d.id);
