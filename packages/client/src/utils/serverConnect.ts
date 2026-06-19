@@ -6,37 +6,55 @@ interface ServerConfig {
   label: string;
 }
 
-// Cached after first resolution
+// Cached after first resolution — survives the lifetime of the page.
 let resolvedEndpoints: { httpBase: string; wsBase: string; label: string } | null = null;
 
 function getLocalProxyBase(): string {
   return `${location.protocol}//${location.host}/.proxy/api`;
 }
 
-/** Resolve the right Colyseus endpoints.
- *  1. On localhost → direct to port 3001.
- *  2. Otherwise → ask the local server's /api/config which URL to use.
- *     The server checks EXTERNAL_SERVER_URL (GoatPanel etc.) and returns it
- *     if reachable, otherwise signals "use local proxy".
+/**
+ * Resolve Colyseus endpoints. Priority order:
+ *
+ *  1. VITE_SERVER_URL baked in at Vercel build time (fastest — zero round-trips).
+ *     Set this in Vercel → Settings → Environment Variables:
+ *       VITE_SERVER_URL = https://goatpanel.duckdns.org:3002
+ *
+ *  2. localhost → direct to port 3001 (local dev).
+ *
+ *  3. Otherwise → ask the local Replit/Vercel server's /config endpoint, which
+ *     probes EXTERNAL_SERVER_URL (server-side env) and returns whichever is reachable.
  */
 export async function resolveEndpoints(): Promise<{ httpBase: string; wsBase: string; label: string }> {
   if (resolvedEndpoints) return resolvedEndpoints;
 
-  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  // ── Priority 1: Vercel build-time env var ──────────────────────────────────
+  const baked = (import.meta.env.VITE_SERVER_URL as string | undefined)?.replace(/\/$/, '');
+  if (baked) {
+    resolvedEndpoints = {
+      httpBase: baked,
+      wsBase: baked.replace(/^https/, 'wss').replace(/^http/, 'ws'),
+      label: baked,
+    };
+    console.log(`[serverConnect] Using baked VITE_SERVER_URL: ${baked}`);
+    return resolvedEndpoints;
+  }
 
+  // ── Priority 2: Local development ─────────────────────────────────────────
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   if (isLocal) {
     resolvedEndpoints = { httpBase: 'http://localhost:3001', wsBase: 'ws://localhost:3001', label: 'local' };
     return resolvedEndpoints;
   }
 
+  // ── Priority 3: Ask server's /config endpoint (dev/staging fallback) ───────
   const proxyBase = getLocalProxyBase();
-
   try {
     const res = await fetch(`${proxyBase}/config`, { signal: AbortSignal.timeout(5000) });
     const cfg = (await res.json()) as ServerConfig;
 
     if (cfg.colyseusUrl) {
-      const url = cfg.colyseusUrl;
+      const url = cfg.colyseusUrl.replace(/\/$/, '');
       resolvedEndpoints = {
         httpBase: url,
         wsBase: url.replace(/^https/, 'wss').replace(/^http/, 'ws'),
@@ -61,9 +79,8 @@ export async function resolveEndpoints(): Promise<{ httpBase: string; wsBase: st
   return resolvedEndpoints;
 }
 
-/** Quick health check using the resolved endpoints. Returns { ok, label }. */
+/** Health-check against the resolved endpoint. Clears cache so it re-probes. */
 export async function checkServerHealth(): Promise<{ ok: boolean; label: string }> {
-  // Force fresh resolution each time health is checked (clears cache)
   resolvedEndpoints = null;
   try {
     const ep = await resolveEndpoints();
@@ -71,8 +88,7 @@ export async function checkServerHealth(): Promise<{ ok: boolean; label: string 
     const data = (await res.json()) as { ok?: boolean };
     return { ok: res.ok && data.ok === true, label: ep.label };
   } catch {
-    const proxyBase = getLocalProxyBase();
-    return { ok: false, label: proxyBase };
+    return { ok: false, label: 'unreachable' };
   }
 }
 

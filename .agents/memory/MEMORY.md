@@ -1,3 +1,4 @@
 - [WYP Feature](wyp-feature.md) — WYP is a local single-player psych quiz (8 Qs, 4 phases, 4 results); lives in src/features/WhoYouPlay.ts.
 - [Project Architecture](project-architecture.md) — IDesktopContext pattern, feature module system, how to add new XP apps.
 - [Project Stack](project-stack.md) — Vite/TS client (Vercel), Colyseus/Express server (Pterodactyl). Node 20 with --ignore-engines.
+- [Pterodactyl Deployment](pterodactyl-deploy.md) — Server connection uses VITE_SERVER_URL baked at Vercel build time; graceful shutdown via SIGTERM; see PTERODACTYL.md for full guide.
