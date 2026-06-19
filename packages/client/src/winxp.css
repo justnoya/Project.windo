@@ -2167,3 +2167,28 @@ html, body { cursor: url('/cursors/arrow.svg') 3 1, default; }
 
 .xp-overlay button:disabled,
 .xp-overlay .xp-disabled { opacity: 0.55; cursor: url('/cursors/arrow.svg') 3 1, not-allowed; }
+
+/* ═══════════════════════════════════════════════════════════════
+   WHO YOU PLAY — PSYCHOLOGICAL QUIZ
+   ═══════════════════════════════════════════════════════════════ */
+
+.wyp-window {
+  min-width: 500px;
+  min-height: 440px;
+}
+
+.wyp-window .xp-titlebar.wyp-titlebar {
+  transition: background 0.8s ease;
+}
+
+@keyframes wyp-fadein {
+  from { opacity: 0; transform: scale(1.03); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.xp-overlay .wyp-opt-btn,
+.xp-overlay .wyp-nav-btn { cursor: url('/cursors/pointer.svg') 8 1, pointer; }
+
+@media (max-width: 600px) {
+  .wyp-window { min-width: unset; }
+}

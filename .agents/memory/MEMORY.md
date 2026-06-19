@@ -1,3 +1,2 @@
-- [Miscord horror redesign](miscord-horror.md) — full CSS+TS horror theme applied; UNKNOWN_ENTITY story + notification system wired in
-- [Start menu architecture](start-menu.md) — recently-opened tracking replaces static links; Shutdown + Restart in footer
-- [Server URL](server-url.md) — Pterodactyl at goatpanel.duckdns.org:3002 confirmed reachable; Replit dev server on port 3001
+- [WYP Feature](wyp-feature.md) — WYP is a local single-player psych quiz (8 Qs, 4 phases, 4 results); no multiplayer/Colyseus needed.
+- [Project Stack](project-stack.md) — Monorepo: Vite/TS client (Vercel), Colyseus/Express server (Pterodactyl Panel). Node 20 with --ignore-engines.

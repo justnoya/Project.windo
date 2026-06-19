@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a3a"/>
+      <stop offset="100%" stop-color="#0a0a18"/>
+    </linearGradient>
+    <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5a7aff"/>
+      <stop offset="100%" stop-color="#3a4acc"/>
+    </linearGradient>
+    <linearGradient id="rg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff6aaa"/>
+      <stop offset="100%" stop-color="#cc3a7a"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="5" fill="url(#bg)"/>
+  <rect width="48" height="48" rx="5" fill="none" stroke="#3a3a6a" stroke-width="1"/>
+  <!-- Happy mask -->
+  <ellipse cx="14" cy="25" rx="9" ry="11" fill="url(#lg)" stroke="#7a9aff" stroke-width="1"/>
+  <ellipse cx="34" cy="25" rx="9" ry="11" fill="url(#rg)" stroke="#ff9acc" stroke-width="1"/>
+  <!-- Divider -->
+  <rect x="22.5" y="14" width="3" height="22" rx="1.5" fill="#0a0a18" opacity="0.5"/>
+  <!-- Happy mask eyes -->
+  <ellipse cx="11" cy="22" rx="2.5" ry="1.8" fill="#0a0a18" opacity="0.8"/>
+  <ellipse cx="17" cy="22" rx="2.5" ry="1.8" fill="#0a0a18" opacity="0.8"/>
+  <!-- Sad mask eyes (arched) -->
+  <path d="M31 21 Q33 19.5 35 21" stroke="#0a0a18" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <path d="M37 21 Q39 19.5 41 21" stroke="#0a0a18" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <!-- Happy smile -->
+  <path d="M9.5 28 Q14 33 18.5 28" stroke="#0a0a18" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Sad frown -->
+  <path d="M29.5 31 Q34 27 38.5 31" stroke="#0a0a18" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Shine dots -->
+  <circle cx="10" cy="19" r="1.2" fill="rgba(255,255,255,0.5)"/>
+  <circle cx="30" cy="19" r="1.2" fill="rgba(255,255,255,0.5)"/>
+  <!-- Question mark at top -->
+  <text x="24" y="12" text-anchor="middle" font-size="9" fill="#7a9aff" font-family="Arial" font-weight="bold" opacity="0.9">?</text>
+</svg>
